@@ -1,0 +1,33 @@
+
+> test
+> node --test
+
+✖ parse token count (0.823708ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 45.301458
+
+✖ failing tests:
+
+test at test/parser.test.js:4:1
+✖ parse token count (0.823708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  318 !== 312
+  
+      at TestContext.<anonymous> (/private/var/folders/n0/9f3pw6ln17dgsxxr3yg95l5w0000gp/T/acc-real-cases-p7hN3b/npm-test-node-failure/test/parser.test.js:7:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1047:25)
+      at Test.start (node:internal/test_runner/test:944:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:297:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 318,
+    expected: 312,
+    operator: 'strictEqual'
+  }

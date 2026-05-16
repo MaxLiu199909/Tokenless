@@ -1,0 +1,25 @@
+Run npm ci
+added 812 packages, and audited 813 packages in 22s
+147 packages are looking for funding
+found 0 vulnerabilities
+
+Run npm run build
+
+> web@1.0.0 build
+> tsc && vite build
+
+src/App.tsx:12:20 - error TS2307: Cannot find module './components/MissingPanel' or its corresponding type declarations.
+
+12 import MissingPanel from './components/MissingPanel';
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+src/routes/dashboard.tsx:45:7 - error TS2322: Type 'string' is not assignable to type 'number'.
+
+45 const retryCount: number = process.env.RETRY_COUNT;
+         ~~~~~~~~~~
+
+error Command failed with exit code 2.
+Process completed with exit code 2.
+
+Post job cleanup.
+Cache saved successfully.

@@ -1,0 +1,9 @@
+{
+  "name": "tokenless",
+  "version": "0.1.0",
+  "description": "Tokenless context compression for Claude Code. Cap noisy tool output locally before it enters model context.",
+  "license": "MIT",
+  "keywords": ["tokenless", "context", "compression", "agent", "claude-code", "hooks"],
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json"
+}

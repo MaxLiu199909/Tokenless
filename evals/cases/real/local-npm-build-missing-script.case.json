@@ -1,0 +1,17 @@
+{
+  "name": "local-npm-build-missing-script",
+  "command": "npm run build",
+  "exitCode": 1,
+  "stdoutFile": "local-npm-build-missing-script.stdout.log",
+  "stderrFile": "local-npm-build-missing-script.stderr.log",
+  "expectedReducer": "ci-build",
+  "mustContain": [
+    "Missing script",
+    "failed phase:"
+  ],
+  "mustExpandAround": [
+    "Missing script"
+  ],
+  "maxTokensAfter": 1200,
+  "maxRatioPercent": 80
+}

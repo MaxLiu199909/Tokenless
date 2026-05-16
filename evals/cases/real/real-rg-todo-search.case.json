@@ -1,0 +1,19 @@
+{
+  "name": "real-rg-todo-search",
+  "command": "rg -n \"TODO|FIXME\" .",
+  "exitCode": 0,
+  "stdoutFile": "real-rg-todo-search.stdout.log",
+  "stderrFile": "real-rg-todo-search.stderr.log",
+  "expectedReducer": "search-output",
+  "mustContain": [
+    "src/parser.js",
+    "src/tokenizer.js",
+    "line"
+  ],
+  "mustExpandAround": [
+    "TODO"
+  ],
+  "maxTokensAfter": 1200,
+  "maxRatioPercent": 90,
+  "minTokensForRatio": 1000
+}

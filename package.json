@@ -1,0 +1,58 @@
+{
+  "name": "tokenless",
+  "version": "0.1.0",
+  "description": "Tokenless context compression for noisy Claude Code tool output",
+  "private": true,
+  "type": "commonjs",
+  "license": "MIT",
+  "bin": {
+    "acc": "plugins/claude-code/bin/acc",
+    "tokenless": "plugins/claude-code/bin/acc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaxLiu199909/Tokenless.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MaxLiu199909/Tokenless/issues"
+  },
+  "homepage": "https://github.com/MaxLiu199909/Tokenless#readme",
+  "keywords": [
+    "tokenless",
+    "claude-code",
+    "agent",
+    "context",
+    "compression",
+    "hooks",
+    "logs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "eval": "node evals/run_eval.js",
+    "eval:synthetic": "node evals/run_eval.js --synthetic",
+    "eval:real": "node evals/run_eval.js --real",
+    "eval:all": "node evals/run_eval.js --all",
+    "eval:complex": "node evals/run_complex_test_log_case.js",
+    "eval:capture": "node evals/capture_real_case.js",
+    "eval:generate-real": "node evals/generate_real_cases.js",
+    "doctor": "node plugins/claude-code/bin/acc doctor --data-dir /tmp/acc-doctor",
+    "tokenless:status": "node plugins/claude-code/bin/acc status --user",
+    "tokenless:install": "node plugins/claude-code/bin/acc install-hooks --user",
+    "tokenless:install:dry-run": "node plugins/claude-code/bin/acc install-hooks --user --dry-run",
+    "tokenless:uninstall:dry-run": "node plugins/claude-code/bin/acc uninstall-hooks --user --dry-run",
+    "tokenless:clean:dry-run": "node plugins/claude-code/bin/acc clean --keep 100 --dry-run",
+    "acc:status": "node plugins/claude-code/bin/acc status --user",
+    "acc:status:project": "node plugins/claude-code/bin/acc status --project",
+    "acc:print-hooks": "node plugins/claude-code/bin/acc print-hooks",
+    "acc:install-hooks": "node plugins/claude-code/bin/acc install-hooks --user",
+    "acc:install-hooks:dry-run": "node plugins/claude-code/bin/acc install-hooks --user --dry-run",
+    "acc:install-hooks:project": "node plugins/claude-code/bin/acc install-hooks --project",
+    "acc:install-hooks:project:dry-run": "node plugins/claude-code/bin/acc install-hooks --project --dry-run",
+    "acc:uninstall-hooks:dry-run": "node plugins/claude-code/bin/acc uninstall-hooks --user --dry-run",
+    "acc:uninstall-hooks:project:dry-run": "node plugins/claude-code/bin/acc uninstall-hooks --project --dry-run",
+    "acc:clean:dry-run": "node plugins/claude-code/bin/acc clean --keep 100 --dry-run",
+    "test:complex": "node evals/run_complex_test_log_case.js --emit"
+  }
+}

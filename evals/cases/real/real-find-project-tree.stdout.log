@@ -1,0 +1,5 @@
+./node_modules/pkg/index.js
+./tests/parser.test.js
+./coverage/index.html
+./src/core/tokenizer.js
+./src/core/parser.js

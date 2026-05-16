@@ -1,0 +1,19 @@
+{
+  "name": "real-npm-build-large-failure",
+  "command": "npm run build",
+  "exitCode": 2,
+  "stdoutFile": "real-npm-build-large-failure.stdout.log",
+  "stderrFile": "real-npm-build-large-failure.stderr.log",
+  "expectedReducer": "ci-build",
+  "mustContain": [
+    "failed phase: build",
+    "Cannot find module",
+    "src/App.tsx:12"
+  ],
+  "mustExpandAround": [
+    "Cannot find module"
+  ],
+  "maxTokensAfter": 2200,
+  "maxRatioPercent": 10,
+  "minTokensForRatio": 1000
+}

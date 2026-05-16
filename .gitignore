@@ -1,0 +1,24 @@
+.DS_Store
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ACC local data
+.acc/
+artifacts/
+
+# Claude Code local workspace settings
+.claude/settings.local.json
+
+# Temporary eval output
+tmp/
+coverage/
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example

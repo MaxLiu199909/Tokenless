@@ -1,0 +1,26 @@
+{
+  "title": "ACC-COMPACTED Output",
+  "type": "object",
+  "required": [
+    "tool",
+    "command",
+    "status",
+    "original_exit_code",
+    "reducer",
+    "compression_before",
+    "compression_after",
+    "artifact_id"
+  ],
+  "properties": {
+    "tool": {"type": "string"},
+    "command": {"type": "string"},
+    "status": {"type": "string", "enum": ["success", "failed"]},
+    "original_exit_code": {"type": "integer"},
+    "reducer": {"type": "string"},
+    "compression_before": {"type": "integer", "minimum": 0},
+    "compression_after": {"type": "integer", "minimum": 0},
+    "artifact_id": {"type": "string"},
+    "key_findings": {"type": "array", "items": {"type": "string"}},
+    "dropped": {"type": "array", "items": {"type": "string"}}
+  }
+}

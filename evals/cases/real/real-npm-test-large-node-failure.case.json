@@ -1,0 +1,20 @@
+{
+  "name": "real-npm-test-large-node-failure",
+  "command": "npm test",
+  "exitCode": 1,
+  "stdoutFile": "real-npm-test-large-node-failure.stdout.log",
+  "stderrFile": "real-npm-test-large-node-failure.stderr.log",
+  "expectedReducer": "test-log",
+  "mustContain": [
+    "AssertionError",
+    "parse token count regression",
+    "expected",
+    "actual"
+  ],
+  "mustExpandAround": [
+    "parse token count regression"
+  ],
+  "maxTokensAfter": 2600,
+  "maxRatioPercent": 35,
+  "minTokensForRatio": 1000
+}

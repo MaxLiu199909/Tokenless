@@ -1,0 +1,20 @@
+{
+  "name": "real-git-diff-parser-change",
+  "command": "git diff",
+  "exitCode": 0,
+  "stdoutFile": "real-git-diff-parser-change.stdout.log",
+  "stderrFile": "real-git-diff-parser-change.stderr.log",
+  "expectedReducer": "git-diff",
+  "mustContain": [
+    "diff --git",
+    "src/parser.js",
+    "@@",
+    "countTokens"
+  ],
+  "mustExpandAround": [
+    "diff --git"
+  ],
+  "maxTokensAfter": 2200,
+  "maxRatioPercent": 90,
+  "minTokensForRatio": 1000
+}

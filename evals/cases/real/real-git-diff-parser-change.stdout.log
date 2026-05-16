@@ -1,0 +1,17 @@
+diff --git a/src/parser.js b/src/parser.js
+index ec4ecad..d952e6b 100644
+--- a/src/parser.js
++++ b/src/parser.js
+@@ -1,5 +1,10 @@
+ function parse(input) {
+-  return input.trim();
++  const safe = String(input || "");
++  return safe.trim().toLowerCase();
+ }
+ 
+-module.exports = { parse };
++function countTokens(input) {
++  return parse(input).split(/\s+/).filter(Boolean).length;
++}
++
++module.exports = { parse, countTokens };

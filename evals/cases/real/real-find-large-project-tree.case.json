@@ -1,0 +1,21 @@
+{
+  "name": "real-find-large-project-tree",
+  "command": "find . -maxdepth 5 -type f",
+  "exitCode": 0,
+  "stdoutFile": "real-find-large-project-tree.stdout.log",
+  "stderrFile": "real-find-large-project-tree.stderr.log",
+  "expectedReducer": "file-tree",
+  "mustContain": [
+    "Project tree summary:",
+    "src/",
+    "tests/",
+    "Large dirs collapsed:",
+    "node_modules/"
+  ],
+  "mustExpandAround": [
+    "src/pkg-39/parser.js"
+  ],
+  "maxTokensAfter": 1000,
+  "maxRatioPercent": 12,
+  "minTokensForRatio": 1000
+}

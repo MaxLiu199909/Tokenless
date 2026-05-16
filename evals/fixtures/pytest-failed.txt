@@ -1,0 +1,32 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11, pytest-8.3.0
+collected 120 items
+
+E tests/test_parser.py::test_parse_token FAILED
+E tests/test_tokenizer.py::test_token_limit FAILED
+
+=================================== FAILURES ===================================
+___________________________ test_parse_token ___________________________
+
+self = <tests.test_parser.ParserTest object at 0x7f9>
+    def test_parse_token(self):
+        output = parse('a:b:c')
+>       assert output == 'a:b:c'
+E       AssertionError: Expected 'a:b:c', Received 'a:b:d'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/project/tests/test_parser.py", line 42, in test_parse_token
+    assert_token('a:b:c', output)
+  File "/app/project/tests/test_parser.py", line 42, in assert_token
+    raise AssertionError
+E       AssertionError: Expected token count 312, got 318
+
+FAILED tests/test_parser.py::test_parse_token - AssertionError: Expected 'a:b:c' but got 'a:b:d'
+FAILED tests/test_tokenizer.py::test_token_limit - AssertionError: Expected '12' but got '24'
+
+=========================== short test summary info ===========================
+FAILED tests/test_parser.py::test_parse_token - AssertionError
+FAILED tests/test_tokenizer.py::test_token_limit - AssertionError
+======================== 2 failed, 118 passed in 0.45s ========================

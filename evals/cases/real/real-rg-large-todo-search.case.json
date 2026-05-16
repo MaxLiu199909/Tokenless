@@ -1,0 +1,19 @@
+{
+  "name": "real-rg-large-todo-search",
+  "command": "rg -n TODO .",
+  "exitCode": 0,
+  "stdoutFile": "real-rg-large-todo-search.stdout.log",
+  "stderrFile": "real-rg-large-todo-search.stderr.log",
+  "expectedReducer": "search-output",
+  "mustContain": [
+    "src/target.js",
+    "src/noise.js",
+    "more matches omitted"
+  ],
+  "mustExpandAround": [
+    "TODO noise match 1199"
+  ],
+  "maxTokensAfter": 1500,
+  "maxRatioPercent": 8,
+  "minTokensForRatio": 1000
+}

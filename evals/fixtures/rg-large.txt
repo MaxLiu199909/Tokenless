@@ -1,0 +1,12 @@
+src/parser.ts:12: function parse(input: string) {
+src/parser.ts:43: const tokenCount = countTokens(input);
+src/parser.ts:120:   return sanitize(input);
+src/tokenizer.ts:9: const tokenCount = countTokens(input);
+src/tokenizer.ts:16: return input.trim().split(' ');
+src/parser.test.ts:8: test('parse basic', () => {
+src/parser.test.ts:88: test('parse with empty', () => {
+src/parser.test.ts:102: test('parse with symbol', () => {
+src/parser.test.ts:121: test('parse with unicode', () => {
+node_modules/.cache/file.js:1: cached
+node_modules/lib/index.js:1: cached
+build/output.js:1: built

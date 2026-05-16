@@ -1,0 +1,20 @@
+{
+  "name": "real-git-diff-large-generated-change",
+  "command": "git diff",
+  "exitCode": 0,
+  "stdoutFile": "real-git-diff-large-generated-change.stdout.log",
+  "stderrFile": "real-git-diff-large-generated-change.stderr.log",
+  "expectedReducer": "git-diff",
+  "mustContain": [
+    "diff --git",
+    "src/generated.js",
+    "@@",
+    "generatedLine0"
+  ],
+  "mustExpandAround": [
+    "generatedLine899"
+  ],
+  "maxTokensAfter": 2400,
+  "maxRatioPercent": 15,
+  "minTokensForRatio": 1000
+}

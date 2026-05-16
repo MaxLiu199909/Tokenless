@@ -1,0 +1,43 @@
+diff --git a/src/parser.ts b/src/parser.ts
+index a1b2c3d..d4e5f6g 100644
+--- a/src/parser.ts
++++ b/src/parser.ts
+@@ -20,7 +20,10 @@
+ export function parse(input: string) {
+-  return input.trim();
++  const safe = sanitize(input);
++  return safe;
+ }
++
++function sanitize(input: string): string {
++  return input.trim().toLowerCase();
++}
+@@ -40,2 +43,3 @@
+-const unused = 1;
++const unused = 1;
++const debug = true;
++
+*** End Patch
+@@ -100,4 +100,14 @@
+-old = remove_old();
+-new = merge(new);
++const newValue = merge(new);
++if (newValue === null) {
++  throw new Error('parse failed');
++}
+*** End Patch
+
+diff --git a/src/tokenizer.ts b/src/tokenizer.ts
+index 1111111..2222222 100644
+--- a/src/tokenizer.ts
++++ b/src/tokenizer.ts
+@@ -1,6 +1,9 @@
+ export function tokenize(input: string): string[] {
+-  return input.split(' ')
++  return input
++    .trim()
++    .split(' ')
++    .filter(Boolean)
++    .map((x) => x.toLowerCase());
+ }
+*** End Patch
