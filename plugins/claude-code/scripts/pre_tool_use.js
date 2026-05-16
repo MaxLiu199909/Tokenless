@@ -30,7 +30,7 @@ function trace(event) {
 }
 
 function getPermissionDecision() {
-  const value = String(process.env.ACC_PRETOOL_PERMISSION || 'deny').trim();
+  const value = String(process.env.TOKENLESS_PRETOOL_PERMISSION || 'deny').trim();
   if (value === 'allow' || value === 'ask' || value === 'deny') {
     return value;
   }
@@ -92,7 +92,7 @@ function main() {
     ...toolInput,
     command: rewritten,
     description: toolInput.description
-      ? `${toolInput.description} (compressed by ACC)`
+      ? `${toolInput.description} (compressed by Tokenless)`
       : `Run compressed command: ${command}`
   };
 
@@ -107,7 +107,7 @@ function main() {
           hookEventName: 'PreToolUse',
           permissionDecision: 'deny',
           permissionDecisionReason: [
-            'ACC is capping this noisy Bash output before it enters model context.',
+            'Tokenless is capping this noisy Bash output before it enters model context.',
             'Run the compacted command instead:',
             rewritten
           ].join('\n')
@@ -122,7 +122,7 @@ function main() {
       hookSpecificOutput: {
         hookEventName: 'PreToolUse',
         permissionDecision,
-        permissionDecisionReason: 'ACC rewrote noisy Bash command through local compression. Approve the rewritten command to keep raw output out of model context.',
+        permissionDecisionReason: 'Tokenless rewrote noisy Bash command through local compression. Approve the rewritten command to keep raw output out of model context.',
         updatedInput
       }
     })

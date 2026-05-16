@@ -4,7 +4,7 @@ Tokenless is a Claude Code plugin for capping noisy tool output before it enters
 
 It is not a generic summarizer. Tokenless keeps raw output as a local artifact and sends Claude a compact evidence packet with enough signal to continue the task.
 
-The current wire format is `ACC-COMPACTED/0.1`. ACC is the internal compression protocol; Tokenless is the product and repo name.
+The current wire format is `TOKENLESS-PACKET/0.1`.
 
 ## What it handles now
 
@@ -21,13 +21,13 @@ Small bounded commands such as `rg -m 20`, `find ... | head`, `cat file | grep`,
 ```text
 Claude wants to run a noisy command
   -> PreToolUse caps it before raw output enters context
-  -> Claude reruns the Tokenless/ACC wrapper
+  -> Claude reruns the Tokenless wrapper
   -> Tokenless executes the original command locally
   -> Tokenless saves raw stdout/stderr as an artifact
-  -> Claude receives ACC-COMPACTED/0.1
+  -> Claude receives TOKENLESS-PACKET/0.1
 ```
 
-The raw output is still available through `acc show` and `acc expand`.
+The raw output is still available through `tokenless show` and `tokenless expand`. The shorter `acc` command remains as a compatibility alias.
 
 ## Quick demo
 
@@ -40,7 +40,7 @@ npm run eval:complex
 Expected shape:
 
 ```text
-ACC-COMPLEX-TEST-LOG/0.1
+TOKENLESS-COMPLEX-TEST/0.1
 raw tokens: 16250
 compressed tokens: ~1100
 ratio: ~7%
@@ -58,7 +58,7 @@ Expected behavior:
 ```text
 PreToolUse caps the command
 Claude reruns node .../bin/acc run --agent ...
-Claude sees ACC-COMPACTED/0.1
+Claude sees TOKENLESS-PACKET/0.1
 ```
 
 ## CLI
@@ -137,7 +137,7 @@ For this local checkout, the hook scripts are:
 - `plugins/claude-code/scripts/post_tool_use.js`
 - `plugins/claude-code/scripts/post_tool_failure.js`
 
-ACC currently uses a PreToolUse `deny` decision as a safety mechanism because some Claude Code builds do not reliably apply `updatedInput`. The message tells Claude to rerun the compacted command. This prevents raw noisy output from entering context.
+Tokenless currently uses a PreToolUse `deny` decision as a safety mechanism because some Claude Code builds do not reliably apply `updatedInput`. The message tells Claude to rerun the compacted command. This prevents raw noisy output from entering context.
 
 ## Artifact workflow
 
@@ -153,7 +153,7 @@ Expand only the relevant area:
 tokenless expand latest --around "Cannot find module" --data-dir ~/.acc
 ```
 
-This is the core ACC loop:
+This is the core Tokenless loop:
 
 ```text
 compact first
@@ -202,10 +202,10 @@ Expected results:
 ```text
 eval:complex: pass: yes
 doctor: all checks [ok]
-tokenless:status: prints ACC-STATUS/0.1
-tokenless:install:dry-run: prints ACC-INSTALL-HOOKS/0.1 and merged settings JSON
-tokenless:uninstall:dry-run: prints ACC-UNINSTALL-HOOKS/0.1 and removed count
-tokenless:clean:dry-run: prints ACC-CLEAN/0.1 with dry_run: yes
+tokenless:status: prints TOKENLESS-STATUS/0.1
+tokenless:install:dry-run: prints TOKENLESS-INSTALL-HOOKS/0.1 and merged settings JSON
+tokenless:uninstall:dry-run: prints TOKENLESS-UNINSTALL-HOOKS/0.1 and removed count
+tokenless:clean:dry-run: prints TOKENLESS-CLEAN/0.1 with dry_run: yes
 eval:all: all cases pass
 ```
 
@@ -220,7 +220,7 @@ Expected behavior:
 ```text
 PreToolUse caps the noisy command
 Claude reruns node .../bin/acc run --agent ...
-Claude receives ACC-COMPACTED/0.1
+Claude receives TOKENLESS-PACKET/0.1
 Failure families are visible
 Raw artifact can be expanded with tokenless expand latest
 ```
@@ -253,4 +253,4 @@ tokenless clean --data-dir ~/.acc --keep 100
 - No cloud service and no LLM summarization.
 - Reducers are deterministic and intentionally conservative.
 - Legal, financial, medical, security, and exact-review tasks may require explicit artifact expansion.
-- Small outputs can still expand slightly if forced through ACC; the classifier avoids common bounded commands, but the policy is not perfect.
+- Small outputs can still expand slightly if forced through Tokenless; the classifier avoids common bounded commands, but the policy is not perfect.

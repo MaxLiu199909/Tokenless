@@ -196,7 +196,7 @@ function createGitDiffCase(root) {
   mkdirp(path.join(dir, 'src'));
   run('git init', dir);
   run('git config user.email acc@example.test', dir);
-  run('git config user.name ACC', dir);
+  run('git config user.name Tokenless', dir);
   write(path.join(dir, 'src', 'parser.js'), [
     'function parse(input) {',
     '  return input.trim();',
@@ -240,7 +240,7 @@ function createGitDiffLargeCase(root) {
   mkdirp(path.join(dir, 'src'));
   run('git init', dir);
   run('git config user.email acc@example.test', dir);
-  run('git config user.name ACC', dir);
+  run('git config user.name Tokenless', dir);
   write(path.join(dir, 'src', 'generated.js'), [
     'export const generated = [];',
     ''

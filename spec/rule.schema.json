@@ -1,5 +1,5 @@
 {
-  "title": "ACC-COMPACTED Output",
+  "title": "TOKENLESS-PACKET Output",
   "type": "object",
   "required": [
     "tool",

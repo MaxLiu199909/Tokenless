@@ -285,7 +285,7 @@ function runDoctor(dataDir) {
   const postToolPath = path.join(pluginRoot, 'scripts', 'post_tool_use.js');
   const userSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
 
-  console.log('ACC-DOCTOR/0.1');
+  console.log('TOKENLESS-DOCTOR/0.1');
   console.log('');
   okLine('node', process.version);
   okLine('acc cli', __filename);
@@ -367,7 +367,7 @@ function printHooks(dataDir) {
   const pluginRoot = path.resolve(__dirname, '..');
   const hooks = buildHooksObject(pluginRoot);
 
-  console.log('ACC-HOOKS/0.1');
+  console.log('TOKENLESS-HOOKS/0.1');
   console.log(`data_dir: ${dataDir}`);
   console.log('');
   console.log(JSON.stringify(hooks, null, 2));
@@ -497,7 +497,7 @@ function installHooks({ scope, settingsPath, dryRun }) {
 
   const merged = mergeSettingsHooks(existing, incoming);
 
-  console.log('ACC-INSTALL-HOOKS/0.1');
+  console.log('TOKENLESS-INSTALL-HOOKS/0.1');
   console.log(`scope: ${scope || 'custom'}`);
   console.log(`settings: ${targetPath}`);
   console.log(`dry_run: ${dryRun ? 'yes' : 'no'}`);
@@ -552,7 +552,7 @@ function removeAccHooks(settings) {
 
 function uninstallHooks({ scope, settingsPath, dryRun }) {
   const targetPath = getSettingsPath(scope, settingsPath);
-  console.log('ACC-UNINSTALL-HOOKS/0.1');
+  console.log('TOKENLESS-UNINSTALL-HOOKS/0.1');
   console.log(`scope: ${scope || 'custom'}`);
   console.log(`settings: ${targetPath}`);
   console.log(`dry_run: ${dryRun ? 'yes' : 'no'}`);
@@ -583,7 +583,7 @@ function uninstallHooks({ scope, settingsPath, dryRun }) {
 
 function printStatus({ scope, settingsPath }) {
   const targetPath = getSettingsPath(scope, settingsPath);
-  console.log('ACC-STATUS/0.1');
+  console.log('TOKENLESS-STATUS/0.1');
   console.log(`scope: ${scope || 'custom'}`);
   console.log(`settings: ${targetPath}`);
   console.log(`settings_exists: ${fs.existsSync(targetPath) ? 'yes' : 'no'}`);
@@ -621,7 +621,7 @@ function cleanArtifacts({ dataDir, keep, olderThan, dryRun }) {
     }
   }
 
-  console.log('ACC-CLEAN/0.1');
+  console.log('TOKENLESS-CLEAN/0.1');
   console.log(`data_dir: ${dataDir}`);
   console.log(`artifacts: ${artifacts.length}`);
   console.log(`delete: ${toDelete.length}`);
@@ -883,7 +883,7 @@ async function main() {
     const parsed = parseListArgs(args.slice(1));
     const artifacts = listArtifacts(parsed.dataDir).slice(0, parsed.limit);
 
-    console.log('ACC-ARTIFACTS/0.1');
+    console.log('TOKENLESS-ARTIFACTS/0.1');
     console.log(`data_dir: ${parsed.dataDir}`);
     console.log(`count: ${artifacts.length}`);
     console.log('');
@@ -905,7 +905,7 @@ async function main() {
       process.exit(1);
     }
 
-    console.log('ACC-LATEST/0.1');
+    console.log('TOKENLESS-LATEST/0.1');
     printArtifactSummary(latest, null);
     console.log(`show: ${formatArtifactPointer(latest.artifact_id, { accPath: __filename, dataDir: parsed.dataDir })}`);
     console.log(`expand: node '${__filename.replace(/'/g, "'\\''")}' expand ${latest.artifact_id} --around "<keyword>" --data-dir '${String(parsed.dataDir).replace(/'/g, "'\\''")}'`);

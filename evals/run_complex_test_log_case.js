@@ -197,7 +197,7 @@ function main() {
   const failures = [];
 
   const mustContain = [
-    'ACC-COMPACTED/0.1',
+    'TOKENLESS-PACKET/0.1',
     'Status: failed',
     'Original exit code: 1',
     'Reducer: test-log',
@@ -252,11 +252,11 @@ function main() {
   if (after > 2200) fail(`compressed output too large: ${after} tokens`, failures);
   if (ratio > 18) fail(`compression ratio too high: ${ratio}%`, failures);
 
-  console.log('ACC-COMPLEX-TEST-LOG/0.1');
+  console.log('TOKENLESS-COMPLEX-TEST/0.1');
   console.log(`raw tokens: ${before}`);
   console.log(`compressed tokens: ${after}`);
   console.log(`ratio: ${ratio}%`);
-  console.log(`acc exit code: ${result.status}`);
+  console.log(`tokenless exit code: ${result.status}`);
   console.log(`pass: ${failures.length === 0 ? 'yes' : 'no'}`);
   if (failures.length) {
     for (const item of failures) {

@@ -56,6 +56,6 @@ Initial Claude Code MVP for Tokenless context compression.
 ### Known limitations
 
 - Claude Code Bash hook only.
-- PreToolUse currently uses `deny` to force rerun through ACC because `updatedInput` behavior can be unreliable across Claude Code builds.
+- PreToolUse currently uses `deny` to force rerun through Tokenless because `updatedInput` behavior can be unreliable across Claude Code builds.
 - Reducers are deterministic and intentionally conservative.
 - Exact-review and high-stakes domains may require explicit artifact expansion.

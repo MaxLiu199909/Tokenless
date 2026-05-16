@@ -1,9 +1,9 @@
-# Compact output format
+# Tokenless packet format
 
-All compressed outputs from ACC use `ACC-COMPACTED/0.1` prefix.
+All compressed outputs from Tokenless use the `TOKENLESS-PACKET/0.1` prefix.
 
 ```
-ACC-COMPACTED/0.1
+TOKENLESS-PACKET/0.1
 
 Tool: Bash
 Command: <original command>
@@ -19,5 +19,5 @@ Dropped:
 - ...
 
 Raw artifact:
-acc show <artifact_id>
+tokenless show <artifact_id>
 ```

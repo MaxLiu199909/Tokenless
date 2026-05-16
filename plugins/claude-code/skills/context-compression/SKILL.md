@@ -1,15 +1,15 @@
 ---
 name: context-compression
-description: Use ACC to compress noisy tool outputs before they enter context. Prefer this skill when running tests, reading diffs, searching large repos, or inspecting logs.
+description: Use Tokenless to compress noisy tool outputs before they enter context. Prefer this skill when running tests, reading diffs, searching large repos, or inspecting logs.
 ---
 
-# ACC Context Compression
+# Tokenless Context Compression
 
 When working in this project, avoid feeding noisy raw outputs directly into context.
 
-The hook automatically routes high-noise Bash commands through ACC.
+The hook automatically routes high-noise Bash commands through Tokenless.
 
-For manual local development in this repository, use `./plugins/claude-code/bin/acc`:
+For manual local development in this repository, use `./plugins/claude-code/bin/acc` or the packaged `tokenless` alias:
 
 ```bash
 ./plugins/claude-code/bin/acc run --agent --data-dir /tmp/acc-dev -- npm test
@@ -25,7 +25,7 @@ High-noise commands include:
 - find, tree, ls -R
 - docker logs/build, kubectl logs/describe, Vercel/Netlify CLI logs
 
-When you see an `ACC-COMPACTED` block:
+When you see a `TOKENLESS-PACKET` block:
 1. Treat it as a compressed evidence packet.
 2. Use the key failures, relevant files, line numbers, and raw artifact pointer.
 3. Do not ask for the full raw output unless needed.

@@ -44,7 +44,7 @@ function compactOutput({ tool, command, exitCode, stdout, stderr, reducer: reduc
   const status = exitCode === 0 ? 'success' : 'failed';
 
   const text = [
-    'ACC-COMPACTED/0.1',
+    'TOKENLESS-PACKET/0.1',
     '',
     `Tool: ${tool || 'Bash'}`,
     `Command: ${command}`,

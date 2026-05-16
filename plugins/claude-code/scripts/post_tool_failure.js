@@ -46,7 +46,7 @@ function main() {
     hookSpecificOutput: {
       hookEventName: 'PostToolUseFailure',
       additionalContext: [
-        'ACC detected that a noisy Bash command failed before compressed output reached context.',
+        'Tokenless detected that a noisy Bash command failed before compressed output reached context.',
         `Original command: ${command}`,
         `Run this compressed retry instead: ${rewritten}`
       ].join('\n')
