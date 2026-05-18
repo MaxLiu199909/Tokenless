@@ -8,6 +8,19 @@ The current wire format is `TOKENLESS-PACKET/0.1`.
 
 ## Quickstart
 
+Install from GitHub:
+
+```bash
+npm install -g github:MaxLiu199909/Tokenless
+tokenless install-hooks --user
+tokenless launch
+```
+
+The package is currently distributed through GitHub releases and GitHub npm
+install. It has not been published to the public npm registry yet.
+
+For local development from a checkout:
+
 ```bash
 git clone https://github.com/MaxLiu199909/Tokenless.git
 cd Tokenless
