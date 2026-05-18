@@ -6,6 +6,14 @@ const path = require('path');
 const os = require('os');
 const { isNoisyCommand } = require('../lib/classify');
 
+function isTokenlessDisabled() {
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+}
+
+if (isTokenlessDisabled()) {
+  process.exit(0);
+}
+
 function shellQuote(value) {
   return `'${String(value).replace(/'/g, "'\\''")}'`;
 }

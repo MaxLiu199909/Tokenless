@@ -22,7 +22,7 @@ function getPacketIndexPath(dataDir) {
   return path.join(ensureDataDir(dataDir), 'read_packet_index.json');
 }
 
-const DEFAULT_EDIT_LEASE_MAX_EDITS = 8;
+const DEFAULT_EDIT_LEASE_MAX_EDITS = 24;
 const DEFAULT_EDIT_LEASE_MAX_AGE_MS = 30 * 60 * 1000;
 
 function readJsonFile(filePath) {

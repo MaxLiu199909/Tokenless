@@ -42,6 +42,13 @@ const SOURCE_EXTENSIONS = new Set([
   '.cs'
 ]);
 
+const SOURCE_PACKET_EXTENSIONS = new Set([
+  '.js',
+  '.jsx',
+  '.ts',
+  '.tsx'
+]);
+
 function getFileExtension(filePath) {
   const base = path.basename(String(filePath || '')).toLowerCase();
   if (base === 'package-lock.json' || base === 'pnpm-lock.yaml' || base === 'yarn.lock') return '.lock';
@@ -60,7 +67,8 @@ function shouldCompactRead({ filePath, text, tokens }) {
   if (tokens < 4000) return false;
   if (isGeneratedPath(filePath)) return true;
   if (LOW_RISK_EXTENSIONS.has(ext)) return true;
-  if (SOURCE_EXTENSIONS.has(ext)) return tokens >= 12000 && false;
+  if (SOURCE_PACKET_EXTENSIONS.has(ext)) return tokens >= 30000;
+  if (SOURCE_EXTENSIONS.has(ext)) return false;
   return tokens >= 12000;
 }
 
@@ -86,6 +94,12 @@ function collectAnchors(lines, filePath) {
   } else if (['.md', '.txt', '.log'].includes(ext)) {
     patterns.push({ type: 'heading', regex: /^\s{0,3}#{1,6}\s+.+/ });
     patterns.push({ type: 'error', regex: /error|failed|exception|warning/i });
+  } else if (SOURCE_PACKET_EXTENSIONS.has(ext)) {
+    patterns.push({ type: 'import', regex: /^\s*import\s.+\sfrom\s+['"][^'"]+['"]/ });
+    patterns.push({ type: 'export', regex: /^\s*export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var|type|interface)\s+\w+/ });
+    patterns.push({ type: 'component', regex: /^\s*(?:export\s+)?(?:default\s+)?(?:function|const)\s+[A-Z][A-Za-z0-9_$]*/ });
+    patterns.push({ type: 'hook', regex: /^\s*(?:export\s+)?(?:const|function)\s+use[A-Z][A-Za-z0-9_$]*/ });
+    patterns.push({ type: 'function', regex: /^\s*(?:export\s+)?(?:async\s+)?function\s+[A-Za-z_$][\w$]*|^\s*(?:export\s+)?(?:const|let)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/ });
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -134,6 +148,12 @@ function truncateText(text, max = 140) {
   const normalized = String(text || '').trim().replace(/\s+/g, ' ');
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, max - 1)}…`;
+}
+
+function splitReadLines(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+  return lines;
 }
 
 function takeWithOmitted(items, max) {
@@ -416,9 +436,9 @@ function summarizeCssComponentMap(lines) {
     if (!match) continue;
     usefulRegions.push(match);
     picked.add(regions.indexOf(match));
-    if (usefulRegions.length >= 8) break;
+    if (usefulRegions.length >= 5) break;
   }
-  if (usefulRegions.length < 8) {
+  if (usefulRegions.length < 5) {
     for (const region of regions
       .map((region, index) => ({ region, index }))
       .filter((item) => !picked.has(item.index))
@@ -428,7 +448,7 @@ function summarizeCssComponentMap(lines) {
       })) {
       usefulRegions.push(region.region);
       picked.add(region.index);
-      if (usefulRegions.length >= 8) break;
+      if (usefulRegions.length >= 5) break;
     }
   }
   usefulRegions.sort((a, b) => a.start - b.start);
@@ -444,31 +464,7 @@ function summarizeCssComponentMap(lines) {
     out.push(`- ${region.label}: lines ${region.start}:${region.end} (${region.selectors.join(', ')})`);
   }
   for (const region of lowRegions) {
-    out.push(`- low-value/generated: lines ${region.start}:${region.end} (${region.selectors.join(', ')}), avoid unless asked`);
-  }
-
-  const expansionHints = [];
-  const firstCandidates = usefulRegions.filter((region) => ['theme/base', 'nav/header', 'hero', 'buttons/actions'].includes(region.label));
-  const first = firstCandidates.length ? {
-    start: Math.min(...firstCandidates.map((region) => region.start)),
-    end: Math.max(...firstCandidates.map((region) => region.end))
-  } : usefulRegions[0];
-  if (first) expansionHints.push(`- first expand: --lines ${Math.max(1, first.start - 5)}:${Math.min(lines.length, first.end + 20)}`);
-  const cardRegions = usefulRegions.filter((region) => /card|panel|visual/.test(region.label));
-  if (cardRegions.length) {
-    const formatted = cardRegions
-      .slice(0, 2)
-      .map((region) => `--lines ${Math.max(1, region.start - 5)}:${Math.min(lines.length, region.end + 20)}`)
-      .join(' OR ');
-    expansionHints.push(`- card/panel task: ${formatted}`);
-  }
-  const themeRegion = usefulRegions.find((region) => region.label === 'theme/base');
-  if (themeRegion && themeRegion !== first) {
-    expansionHints.push(`- color/theme task: --lines ${Math.max(1, themeRegion.start - 2)}:${Math.min(lines.length, themeRegion.end + 10)}`);
-  }
-  if (expansionHints.length) {
-    out.push('Recommended expansions:');
-    out.push(...expansionHints.slice(0, 3));
+    out.push(`- low-value/generated: lines ${region.start}:${region.end} (${region.selectors.join(', ')})`);
   }
 
   return out.length > 1 ? out : [];
@@ -504,19 +500,158 @@ function renderSection(title, items, max, formatter, omittedLabel) {
   return lines;
 }
 
-function summarizeCss(lines, anchors) {
+function summarizeCss(lines, anchors, context = {}) {
   const variables = extractCssVariables(lines);
   const keyVariables = extractCssKeyVariables(lines);
   const colors = extractCssColors(lines);
   const atRules = extractCssAtRules(lines);
   const componentMap = summarizeCssComponentMap(lines);
+  const actionBrief = buildCssActionBrief(lines, context);
+  const snippets = extractCssEditableSnippets(lines);
   const showColors = keyVariables.length < 4;
 
   return [
+    ...actionBrief,
+    ...snippets,
     ...componentMap,
     ...renderSection('Key variables', keyVariables.length ? keyVariables : variables, 8, (item) => `- line ${item.line} ${item.text}`, 'css variables'),
     ...(showColors ? renderSection('Top colors', colors, 5, (item) => `- ${item.color} count=${item.count} first=line ${item.firstLine}`, 'colors') : []),
     ...renderSection('Media and animations', atRules, 3, (item) => `- line ${item.line} ${item.text}`, 'media/animation rules')
+  ];
+}
+
+const CSS_ACTION_TARGETS = [
+  { label: 'theme/base tokens', regex: /^:root\b|^body(?:::before|::after)?\b/i },
+  { label: 'navigation/header', regex: /\.(?:site-header|site-nav|nav-list|nav-links|brand-mark|nav-brand|header|navbar)\b/i },
+  { label: 'hero area', regex: /\.(?:hero|hero-title|hero-copy|hero-lead|hero-actions|hero-eyebrow|hero-kicker)\b/i },
+  { label: 'buttons/actions', regex: /\.(?:button|btn|button-primary|button-secondary|cta|action)\b/i },
+  { label: 'visual object', regex: /\.(?:observatory-visual|hero-visual|formula-card|formula-glow|formula-face|formula-chip|portrait|orbit|avatar|media)\b/i },
+  { label: 'cards/panels', regex: /:is\(.*(?:card|panel)|\.(?:metric-card|stat-card|field-card|feature-card|lab-panel|quote-panel|card|panel|tile)\b/i },
+  { label: 'sections/grids', regex: /\.(?:section|content-section|field-grid|feature-grid|metric-strip|stats-strip|lab-grid|lab-section)\b/i },
+  { label: 'timeline/list detail', regex: /\.(?:timeline|timeline-card|timeline-year|timeline-row|timeline-item)\b/i },
+  { label: 'footer', regex: /\.(?:footer|site-footer)\b/i }
+];
+
+function blockMatchesTarget(block, target) {
+  return target.regex.test(block.selector || '');
+}
+
+function scoreSnippetGroup(group, targetIndex) {
+  return group.reduce((sum, block) => sum + block.editableScore + block.visualProps, 0) + (CSS_ACTION_TARGETS.length - targetIndex) * 4;
+}
+
+function groupBlocks(blocks, maxGap = 24) {
+  const groups = [];
+  for (const block of blocks) {
+    const last = groups[groups.length - 1];
+    if (last && block.start - last.end <= maxGap) {
+      last.end = block.end;
+      last.blocks.push(block);
+    } else {
+      groups.push({ start: block.start, end: block.end, blocks: [block] });
+    }
+  }
+  return groups;
+}
+
+function selectCssSnippetRegions(lines) {
+  const blocks = getCssRuleBlocks(lines).filter((block) => block.lowValueScore === 0);
+  const selected = [];
+  const occupied = [];
+
+  function overlaps(region) {
+    return occupied.some((item) => !(region.end < item.start || region.start > item.end));
+  }
+
+  for (let targetIndex = 0; targetIndex < CSS_ACTION_TARGETS.length; targetIndex++) {
+    const target = CSS_ACTION_TARGETS[targetIndex];
+    const matching = blocks.filter((block) => blockMatchesTarget(block, target));
+    if (!matching.length) continue;
+
+    const groups = groupBlocks(matching, 28)
+      .map((group) => ({
+        label: target.label,
+        start: group.start,
+        end: group.end,
+        selectors: group.blocks.map((block) => block.selector).slice(0, 5),
+        score: scoreSnippetGroup(group.blocks, targetIndex)
+      }))
+      .filter((group) => (group.end - group.start) <= 90)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.start - b.start;
+      });
+
+    const picked = groups.find((group) => !overlaps(group));
+    if (!picked) continue;
+    selected.push(picked);
+    occupied.push({ start: picked.start, end: picked.end });
+    if (selected.length >= 7) break;
+  }
+
+  return selected.sort((a, b) => a.start - b.start);
+}
+
+function extractCssEditableSnippets(lines) {
+  const regions = selectCssSnippetRegions(lines);
+  if (!regions.length) return [];
+
+  const out = [
+    'Editable snippets:',
+    '- These are exact current text for high-impact regions; prefer editing from these before more inspection.',
+    '- If exact old_string is missing, inspect only that one selector/range.'
+  ];
+
+  for (const region of regions) {
+    const code = lines.slice(region.start - 1, region.end).join('\n');
+    out.push(`- ${region.label}: lines ${region.start}:${region.end} selectors=${region.selectors.join(', ')}`);
+    out.push('```css');
+    out.push(code);
+    out.push('```');
+  }
+
+  return out;
+}
+
+function buildPacketActionBoundary({ artifact, tokenlessPath, dataDir }) {
+  const commandPrefix = tokenlessPath
+    ? `node '${String(tokenlessPath).replace(/'/g, "'\\''")}'`
+    : 'tokenless';
+  const dataDirPart = dataDir ? ` --data-dir '${String(dataDir).replace(/'/g, "'\\''")}'` : '';
+
+  return [
+    'Action boundary:',
+    '- First action after this packet should be one minimal native Read on this file to register editor state if you plan to edit.',
+    '- After that registration Read, make 6-10 bounded Edit calls from the snippets below without additional exploration.',
+    '- Use snippets below as exact old_string sources.',
+    '- Do not wait for "File must be read first"; proactively do the minimal registration Read once, then edit. If it still appears, do not remap the file.',
+    '- Do not run tokenless read again for this file unless Tokenless reports TOKENLESS-STALE.',
+    '- tokenless read is whole-file packet creation only; it does not support --range, --selector, --lines, or similar lookup flags.',
+    '- Do not grep/sed/small-Read the same file unless an exact old_string is missing.',
+    '- If exact text is missing, only these artifact lookup commands are valid:',
+    `  1. ${commandPrefix} expand ${artifact} --around "<selector-or-text>"${dataDirPart}`,
+    `  2. ${commandPrefix} expand ${artifact} --lines <start:end>${dataDirPart}`,
+    '- Budget: at most 2 artifact lookups before editing.',
+    '- If you exceed the budget, Tokenless may warn or compact later expand output rather than blocking it.'
+  ];
+}
+
+function buildCssActionBrief(lines, context = {}) {
+  const regions = selectCssSnippetRegions(lines);
+  const labels = regions.map((region) => `${region.label} ${region.start}:${region.end}`);
+  const targetLine = labels.length
+    ? `- Suggested first-pass targets: ${labels.join('; ')}.`
+    : '- Suggested first-pass targets: theme variables, background, nav/header, buttons, cards/panels, hero/visual, footer.';
+
+  return [
+    ...buildPacketActionBoundary(context),
+    'Action brief:',
+    '- For broad visual/style requests, do not fully map the file. Do one minimal native Read to register editor state, then make 6-10 bounded Edit calls using the snippets below.',
+    '- Do not use tokenless expand, grep, rg, sed, or extra Read calls unless a required old_string is missing from all snippets.',
+    targetLine,
+    '- Avoid repeated grep/Read/artifact-inspection loops.',
+    '- Stop after meaningful high-impact improvements unless the user asks for exhaustive polish.',
+    '- Final answer: 3-5 concise bullets only; do not write a long change diary.'
   ];
 }
 
@@ -604,34 +739,231 @@ function summarizeHtml(lines) {
   ];
 }
 
-function buildEditableSummary(lines, anchors, filePath) {
+const SOURCE_DECL_RE = /^\s*(?:(export)\s+)?(?:(default)\s+)?(?:(async)\s+)?(?:(function|class)\s+([A-Za-z_$][\w$]*)|(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:React\.)?(?:memo|forwardRef)?\s*\(?)/;
+const SOURCE_REACT_HINT_RE = /\b(React|useState|useEffect|useMemo|useCallback|useReducer|useRef|jsx|tsx|className|props|children|return\s*\(|<[A-Z][A-Za-z0-9]*)\b/;
+const SOURCE_EDIT_HINT_RE = /\b(handler|handle|submit|save|delete|update|render|view|panel|card|button|modal|form|input|fetch|load|query|filter|state|reducer|effect|validate|route|layout|theme|style)\b/i;
+
+function sourceLang(filePath) {
+  const ext = getFileExtension(filePath);
+  if (ext === '.ts' || ext === '.tsx') return 'ts';
+  return 'js';
+}
+
+function getSourceDeclarations(lines) {
+  const declarations = [];
+  let current = null;
+  let depth = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const match = !current ? raw.match(SOURCE_DECL_RE) : null;
+    const opens = (raw.match(/\{/g) || []).length + (raw.match(/\(/g) || []).length * 0;
+    const closes = (raw.match(/\}/g) || []).length + (raw.match(/\)/g) || []).length * 0;
+
+    if (!current && match) {
+      const keyword = match[4] || match[6] || 'const';
+      const name = match[5] || match[7] || '(anonymous)';
+      current = {
+        start: i + 1,
+        end: i + 1,
+        keyword,
+        name,
+        exported: Boolean(match[1] || match[2]),
+        lines: 0,
+        reactScore: 0,
+        editScore: 0
+      };
+      depth = 0;
+    }
+
+    if (current) {
+      current.end = i + 1;
+      current.lines += 1;
+      if (SOURCE_REACT_HINT_RE.test(raw)) current.reactScore += 1;
+      if (SOURCE_EDIT_HINT_RE.test(raw)) current.editScore += 1;
+      depth += opens - closes;
+      if ((depth <= 0 && ((current.lines === 1 && /;\s*$/.test(raw)) || (current.lines > 1 && /[};]\s*$/.test(raw)))) || current.lines >= 140) {
+        declarations.push(current);
+        current = null;
+        depth = 0;
+      }
+    }
+  }
+
+  if (current) declarations.push(current);
+  return declarations;
+}
+
+function extractSourceImports(lines) {
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*import\s/.test(lines[i])) out.push({ line: i + 1, text: truncateText(lines[i], 120) });
+  }
+  return out;
+}
+
+function extractSourceExports(lines) {
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*export\s/.test(lines[i])) out.push({ line: i + 1, text: truncateText(lines[i], 120) });
+  }
+  return out;
+}
+
+function classifySourceDeclaration(decl) {
+  if (/^use[A-Z]/.test(decl.name)) return 'hook';
+  if (/^[A-Z]/.test(decl.name) && decl.reactScore > 0) return 'component';
+  if (/reducer|state|store/i.test(decl.name)) return 'state/reducer';
+  if (/handler|handle|submit|save|delete|update|validate/i.test(decl.name)) return 'handlers/actions';
+  if (/fetch|load|query|request|get|list/i.test(decl.name)) return 'data/loaders';
+  if (/render|view|panel|card|button|modal|form|layout/i.test(decl.name)) return 'ui/helpers';
+  if (decl.exported) return 'exports/api';
+  return 'helpers';
+}
+
+function summarizeSourceMap(lines) {
+  const declarations = getSourceDeclarations(lines);
+  if (!declarations.length) return [];
+
+  const buckets = new Map();
+  for (const decl of declarations) {
+    const label = classifySourceDeclaration(decl);
+    if (!buckets.has(label)) buckets.set(label, []);
+    buckets.get(label).push(decl);
+  }
+
+  const priority = ['component', 'hook', 'state/reducer', 'handlers/actions', 'data/loaders', 'ui/helpers', 'exports/api', 'helpers'];
+  const out = ['Source map:'];
+  for (const label of priority) {
+    const items = (buckets.get(label) || []).slice(0, 5);
+    if (!items.length) continue;
+    out.push(`- ${label}: ${items.map((item) => `${item.name} ${item.start}:${item.end}`).join('; ')}`);
+  }
+  return out.length > 1 ? out : [];
+}
+
+function selectSourceSnippetRegions(lines) {
+  const declarations = getSourceDeclarations(lines);
+  const scored = declarations
+    .map((decl) => {
+      let score = 0;
+      if (decl.exported) score += 3;
+      if (/^[A-Z]/.test(decl.name) && decl.reactScore > 0) score += 8;
+      if (/^use[A-Z]/.test(decl.name)) score += 7;
+      if (SOURCE_EDIT_HINT_RE.test(decl.name)) score += 5;
+      score += Math.min(5, decl.reactScore);
+      score += Math.min(5, decl.editScore);
+      if (decl.lines > 120) score -= 6;
+      return { ...decl, score, label: classifySourceDeclaration(decl) };
+    })
+    .filter((decl) => decl.lines <= 140 && decl.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.start - b.start;
+    });
+
+  const selected = [];
+  const seenLabels = new Set();
+  for (const decl of scored) {
+    if (selected.length >= 7) break;
+    if (seenLabels.has(decl.label) && selected.length >= 4) continue;
+    selected.push(decl);
+    seenLabels.add(decl.label);
+  }
+
+  return selected.sort((a, b) => a.start - b.start);
+}
+
+function buildSourceActionBoundary({ artifact, tokenlessPath, dataDir }) {
+  const commandPrefix = tokenlessPath
+    ? `node '${String(tokenlessPath).replace(/'/g, "'\\''")}'`
+    : 'tokenless';
+  const dataDirPart = dataDir ? ` --data-dir '${String(dataDir).replace(/'/g, "'\\''")}'` : '';
+
+  return [
+    'Action boundary:',
+    '- First action after this packet should be one minimal native Read on this file to register editor state if you plan to edit.',
+    '- After that registration Read, make 4-8 bounded Edit calls from the snippets below without additional exploration.',
+    '- Use snippets below as exact old_string sources.',
+    '- Do not remap the file with grep/rg/sed or repeated Read calls.',
+    '- Do not run tokenless read again for this file unless Tokenless reports TOKENLESS-STALE.',
+    '- If exact text is missing, only these artifact lookup commands are valid:',
+    `  1. ${commandPrefix} expand ${artifact} --around "<symbol-or-text>"${dataDirPart}`,
+    `  2. ${commandPrefix} expand ${artifact} --lines <start:end>${dataDirPart}`,
+    '- Budget: at most 2 artifact lookups before editing.'
+  ];
+}
+
+function buildSourceActionBrief(lines, context = {}) {
+  const regions = selectSourceSnippetRegions(lines);
+  const labels = regions.map((region) => `${region.label}:${region.name} ${region.start}:${region.end}`);
+  return [
+    ...buildSourceActionBoundary(context),
+    'Action brief:',
+    '- For broad JS/TS/React edits, do not fully map the file. Register editor state once, then edit from snippets.',
+    labels.length
+      ? `- Suggested first-pass targets: ${labels.join('; ')}.`
+      : '- Suggested first-pass targets: exported component, hook/state logic, handlers, data loaders, UI helper blocks.',
+    '- Do not run tests, build, typecheck, or browser validation unless the user explicitly asks.',
+    '- Final answer: 3-5 concise bullets only; do not write a long change diary.'
+  ];
+}
+
+function extractSourceEditableSnippets(lines, filePath) {
+  const regions = selectSourceSnippetRegions(lines);
+  if (!regions.length) return [];
+  const lang = sourceLang(filePath);
+  const out = [
+    'Editable snippets:',
+    '- Exact current text for high-impact source regions; prefer editing from these before more inspection.'
+  ];
+  for (const region of regions) {
+    const code = lines.slice(region.start - 1, region.end).join('\n');
+    out.push(`- ${region.label}: ${region.name} lines ${region.start}:${region.end}`);
+    out.push(`\`\`\`${lang}`);
+    out.push(code);
+    out.push('```');
+  }
+  return out;
+}
+
+function summarizeSource(lines, filePath, context = {}) {
+  const imports = extractSourceImports(lines);
+  const exports = extractSourceExports(lines);
+  return [
+    ...buildSourceActionBrief(lines, context),
+    ...extractSourceEditableSnippets(lines, filePath),
+    ...summarizeSourceMap(lines),
+    ...renderSection('Imports', imports, 10, (item) => `- line ${item.line} ${item.text}`, 'imports'),
+    ...renderSection('Exports', exports, 10, (item) => `- line ${item.line} ${item.text}`, 'exports')
+  ];
+}
+
+function buildEditableSummary(lines, anchors, filePath, context = {}) {
   const ext = getFileExtension(filePath);
   if (['.css', '.scss', '.sass', '.less'].includes(ext)) {
-    return summarizeCss(lines, anchors);
+    return summarizeCss(lines, anchors, context);
   }
   if (['.html', '.htm', '.svg'].includes(ext)) {
     return summarizeHtml(lines);
+  }
+  if (SOURCE_PACKET_EXTENSIONS.has(ext)) {
+    return summarizeSource(lines, filePath, context);
   }
   return [];
 }
 
 function summarizeRead({ filePath, text, artifactId, tokenlessPath, dataDir }) {
-  const lines = String(text || '').split(/\r?\n/);
+  const lines = splitReadLines(text);
   const beforeTokens = estimateTokens(text);
   const anchors = collectAnchors(lines, filePath);
-  const editableSummary = buildEditableSummary(lines, anchors, filePath);
+  const artifact = artifactId || 'null';
+  const editableSummary = buildEditableSummary(lines, anchors, filePath, { artifact, tokenlessPath, dataDir });
   const ext = getFileExtension(filePath);
   const isCssLike = ['.css', '.scss', '.sass', '.less'].includes(ext);
   const visibleAnchors = editableSummary.length
     ? (isCssLike ? [] : selectVisibleAnchors(anchors).slice(0, 25))
     : selectVisibleAnchors(anchors);
-  const artifact = artifactId || 'null';
-  const commandPrefix = tokenlessPath
-    ? `node '${String(tokenlessPath).replace(/'/g, "'\\''")}'`
-    : 'tokenless';
-  const dataDirPart = dataDir ? ` --data-dir '${String(dataDir).replace(/'/g, "'\\''")}'` : '';
-  const aroundExample = anchors[0] ? anchors[0].text.split(/\s+/).slice(0, 2).join(' ') : path.basename(filePath || '');
-
   const packet = [
     'TOKENLESS-READ-PACKET/0.1',
     '',
@@ -640,24 +972,17 @@ function summarizeRead({ filePath, text, artifactId, tokenlessPath, dataDir }) {
     `Type: ${ext || '(none)'}`,
     `Lines: ${lines.length}`,
     `Original tokens estimated: ${beforeTokens}`,
+    `Local artifact: ${artifact}`,
     '',
-    'Safety rule:',
-    '- Do not edit from this packet alone. Expand exact evidence first.',
-    '- For fuzzy style tasks, start with variables or one high-impact component.',
-    '- Expand more only if needed; avoid broad redesign unless the user asks.',
-    '- Keep tool inputs small: no large heredoc, cat > script, node -e, or python patch scripts.',
-    '',
-    ...(editableSummary.length ? ['Editable summary:', ...editableSummary, ''] : []),
+    ...(editableSummary.length ? ['Summary:', ...editableSummary, ''] : []),
     ...(!isCssLike ? [
       'Structure anchors:',
       ...(visibleAnchors.length ? visibleAnchors.map((item) => `- line ${item.line} [${item.type}] ${item.text}`) : ['- (no anchors detected)']),
       ''
     ] : []),
-    'Expand before editing:',
-    `- ${commandPrefix} expand ${artifact} --around "${aroundExample.replace(/"/g, '\\"')}"${dataDirPart}`,
-    `- ${commandPrefix} expand ${artifact} --lines 1:120${dataDirPart}`,
-    '',
-    `Raw artifact: ${commandPrefix} show ${artifact}${dataDirPart}`,
+    'Fallback local access:',
+    `- Artifact ${artifact} is stored locally; use only the two artifact lookup commands listed in Action boundary when needed.`,
+    `- Avoid show/raw/full-file reads during normal editing; they usually lengthen the agent trajectory.`,
     ''
   ].join('\n');
 

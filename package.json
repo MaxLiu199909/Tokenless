@@ -37,6 +37,7 @@
     "eval:complex": "node evals/run_complex_test_log_case.js",
     "eval:read": "node evals/run_read_eval.js",
     "eval:edit": "node evals/run_edit_eval.js",
+    "eval:cli-smoke": "node evals/run_cli_smoke.js",
     "eval:capture": "node evals/capture_real_case.js",
     "eval:generate-real": "node evals/generate_real_cases.js",
     "doctor": "node plugins/claude-code/bin/tokenless doctor --data-dir /tmp/tokenless-doctor",

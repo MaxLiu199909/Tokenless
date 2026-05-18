@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `TOKENLESS_MODE=off|false|0|disabled` now disables Tokenless hook behavior at the hook entrypoints, enabling true OFF benchmark runs.
+- `tokenless status` now prints the current Tokenless mode and whether it came from `TOKENLESS_MODE`.
+- `tokenless benchmark-copy aurora-10k-tsx` creates fresh ON/OFF benchmark copies and prints matching launch/stat commands.
+- `tokenless api-probe start --name <slug>` creates a timestamped API-body directory and prints reusable telemetry exports.
+- `npm run eval:cli-smoke` verifies the new CLI surfaces without launching Claude Code.
+
+### Documentation
+
+- Added API-body benchmark results for large CSS visual edits and a 10k-line React/TSX edit.
+- Added `docs/benchmarking.md` with true-ON/OFF setup, raw API body capture instructions, and benchmark caveats.
+
 ## v0.1.0-mvp
 
 Initial Claude Code MVP for Tokenless context compression.

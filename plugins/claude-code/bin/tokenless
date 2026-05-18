@@ -9,7 +9,7 @@ const os = require('os');
 const { isNoisyCommand, getReducerForCommand, getReducerForOutput } = require('../lib/classify');
 const { compactOutput, estimateTokens } = require('../lib/compact');
 const { shouldCompactRead, summarizeRead } = require('../lib/read_compact');
-const { clearReadGate, markReadPacket, listReadGates, listReadPackets } = require('../lib/read_gate');
+const { clearReadGate, markReadPacket, getReadPacketState, listReadGates, listReadPackets } = require('../lib/read_gate');
 const {
   createArtifact,
   readArtifact,
@@ -40,7 +40,8 @@ function usage() {
   console.log('  tokenless install-commands [--user] [--data-dir <dir>] [--dry-run]');
   console.log('  tokenless uninstall-commands [--user] [--dry-run]');
   console.log('  tokenless api-usage [--source <dir>] [--since <24h|7d>]');
-  console.log('  tokenless api-probe start|stop|inspect|latest|stats [--dir <dir>] [--data-dir <dir>] [--keyword <text>] [--show-snippet]');
+  console.log('  tokenless api-probe start|stop|inspect|latest|stats [--dir <dir>] [--name <slug>] [--data-dir <dir>] [--keyword <text>] [--show-snippet]');
+  console.log('  tokenless benchmark-copy <fixture> [--source <dir>] [--out-root <dir>] [--name <slug>] [--file <path>]');
   console.log('  tokenless list --data-dir <dir> [--limit <n>]');
   console.log('  tokenless latest --data-dir <dir>');
   console.log('  tokenless stats --data-dir <dir>');
@@ -64,6 +65,18 @@ function stripQuotes(value) {
 
 function shellQuote(value) {
   return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+function timestampSlug(date = new Date()) {
+  return date.toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+}
+
+function sanitizeSlug(value) {
+  return String(value || 'run')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'run';
 }
 
 function parseShowOrExpandArgs(args) {
@@ -309,10 +322,16 @@ function parseApiProbeArgs(argv) {
   let dataDir = process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), '.tokenless');
   let keyword = null;
   let showSnippet = false;
+  let name = null;
 
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === '--dir') {
       dir = stripQuotes(argv[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (argv[i] === '--name') {
+      name = String(stripQuotes(argv[i + 1]) || '').trim();
       i += 1;
       continue;
     }
@@ -331,7 +350,43 @@ function parseApiProbeArgs(argv) {
     }
   }
 
-  return { action, dir, dataDir, keyword, showSnippet };
+  if (name && !argv.includes('--dir')) {
+    dir = path.join(os.homedir(), '.tokenless', `api-bodies-${sanitizeSlug(name)}-${timestampSlug()}`);
+  }
+
+  return { action, dir, dataDir, keyword, showSnippet, name };
+}
+
+function parseBenchmarkCopyArgs(argv) {
+  const fixture = argv[0] || '';
+  let source = null;
+  let outRoot = os.homedir();
+  let name = null;
+  let file = null;
+
+  for (let i = 1; i < argv.length; i++) {
+    if (argv[i] === '--source') {
+      source = stripQuotes(argv[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (argv[i] === '--out-root') {
+      outRoot = stripQuotes(argv[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (argv[i] === '--name') {
+      name = stripQuotes(argv[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (argv[i] === '--file') {
+      file = stripQuotes(argv[i + 1]);
+      i += 1;
+    }
+  }
+
+  return { fixture, source, outRoot, name, file };
 }
 
 function parseInstallHooksArgs(argv) {
@@ -1051,11 +1106,141 @@ function uninstallSlashCommands({ commandsDir, dryRun }) {
   }
 }
 
+function getBenchmarkFixtureDefaults(fixture) {
+  const normalized = sanitizeSlug(fixture);
+  if (normalized === 'aurora-10k-tsx' || normalized === 'aurora') {
+    return {
+      fixture: 'aurora-10k-tsx',
+      source: '/Users/mac/aurora-ops-10k-tsx-original',
+      file: 'src/App.tsx',
+      outputPrefix: 'aurora-ops-10k-tsx-benchmark',
+      apiPrefix: 'aurora-10k-tsx'
+    };
+  }
+  if (normalized === 'einstein-css' || normalized === 'css') {
+    return {
+      fixture: 'einstein-css',
+      source: '/Users/mac/einstein-observatory-original',
+      file: 'style.css',
+      outputPrefix: 'einstein-observatory-benchmark',
+      apiPrefix: 'einstein-css'
+    };
+  }
+  return null;
+}
+
+function chmodUserWritableRecursive(targetPath) {
+  if (!fs.existsSync(targetPath)) return;
+  const stat = fs.statSync(targetPath);
+  fs.chmodSync(targetPath, stat.mode | 0o200);
+  if (!stat.isDirectory()) return;
+  for (const child of fs.readdirSync(targetPath)) {
+    chmodUserWritableRecursive(path.join(targetPath, child));
+  }
+}
+
+function printBenchmarkCommands({ fixture, onFile, offFile, apiPrefix }) {
+  console.log('');
+  console.log('ON command:');
+  console.log('```bash');
+  console.log('cd /Users/mac/Documents/TokenCap/Tokenless');
+  console.log('export TOKENLESS_MODE=on');
+  console.log(`export TOKENLESS_API_ON_DIR="/Users/mac/.tokenless/api-bodies-${apiPrefix}-on-$(date +%Y%m%d-%H%M%S)"`);
+  console.log('mkdir -p "$TOKENLESS_API_ON_DIR"');
+  console.log('export CLAUDE_CODE_ENABLE_TELEMETRY=1');
+  console.log('export OTEL_LOG_RAW_API_BODIES="file:$TOKENLESS_API_ON_DIR"');
+  console.log('./claude-zenmux.sh');
+  console.log('```');
+  console.log('');
+  console.log('ON file:');
+  console.log(onFile);
+  console.log('');
+  console.log('OFF command:');
+  console.log('```bash');
+  console.log('cd /Users/mac/Documents/TokenCap/Tokenless');
+  console.log('export TOKENLESS_MODE=off');
+  console.log(`export TOKENLESS_API_OFF_DIR="/Users/mac/.tokenless/api-bodies-${apiPrefix}-off-$(date +%Y%m%d-%H%M%S)"`);
+  console.log('mkdir -p "$TOKENLESS_API_OFF_DIR"');
+  console.log('export CLAUDE_CODE_ENABLE_TELEMETRY=1');
+  console.log('export OTEL_LOG_RAW_API_BODIES="file:$TOKENLESS_API_OFF_DIR"');
+  console.log('./claude-zenmux.sh');
+  console.log('```');
+  console.log('');
+  console.log('OFF file:');
+  console.log(offFile);
+  console.log('');
+  console.log('Stats commands:');
+  console.log('```bash');
+  console.log('node plugins/claude-code/bin/tokenless api-probe stats --dir "$TOKENLESS_API_ON_DIR" --data-dir /Users/mac/.tokenless');
+  console.log('node plugins/claude-code/bin/tokenless api-probe stats --dir "$TOKENLESS_API_OFF_DIR" --data-dir /Users/mac/.tokenless');
+  console.log('```');
+  console.log('');
+  console.log('True-OFF check: TOKENLESS-READ-PACKET must be request=0 and request_saved_estimate must be 0.');
+  if (fixture === 'aurora-10k-tsx') {
+    console.log('');
+    console.log('Suggested prompt path is the ON/OFF file above followed by the same fuzzy React console improvement prompt.');
+  }
+}
+
+function benchmarkCopy({ fixture, source, outRoot, name, file }) {
+  const defaults = getBenchmarkFixtureDefaults(fixture);
+  if (!defaults && !source) {
+    console.error('tokenless benchmark-copy requires a known fixture or --source <dir>');
+    console.error('known fixtures: aurora-10k-tsx, einstein-css');
+    process.exit(1);
+  }
+
+  const resolvedFixture = defaults ? defaults.fixture : sanitizeSlug(fixture || name || 'custom');
+  const sourceDir = path.resolve(source || defaults.source);
+  const relativeFile = file || (defaults && defaults.file) || '';
+  const outputPrefix = sanitizeSlug(name || (defaults && defaults.outputPrefix) || `${resolvedFixture}-benchmark`);
+  const apiPrefix = sanitizeSlug((defaults && defaults.apiPrefix) || resolvedFixture);
+  const stamp = timestampSlug();
+  const baseDir = path.join(path.resolve(outRoot || os.homedir()), `${outputPrefix}-${stamp}`);
+  const onDir = path.join(baseDir, 'on');
+  const offDir = path.join(baseDir, 'off');
+
+  if (!fs.existsSync(sourceDir)) {
+    console.error(`source not found: ${sourceDir}`);
+    process.exit(1);
+  }
+
+  fs.mkdirSync(baseDir, { recursive: true });
+  fs.cpSync(sourceDir, onDir, { recursive: true });
+  fs.cpSync(sourceDir, offDir, { recursive: true });
+  chmodUserWritableRecursive(onDir);
+  chmodUserWritableRecursive(offDir);
+
+  const onFile = relativeFile ? path.join(onDir, relativeFile) : onDir;
+  const offFile = relativeFile ? path.join(offDir, relativeFile) : offDir;
+
+  console.log('TOKENLESS-BENCHMARK-COPY/0.1');
+  console.log(`fixture: ${resolvedFixture}`);
+  console.log(`source: ${sourceDir}`);
+  console.log(`base: ${baseDir}`);
+  console.log(`on: ${onDir}`);
+  console.log(`off: ${offDir}`);
+  if (relativeFile) {
+    console.log(`on_file: ${onFile}`);
+    console.log(`off_file: ${offFile}`);
+    if (fs.existsSync(onFile)) {
+      const lines = fs.readFileSync(onFile, 'utf8').split(/\r?\n/).length;
+      console.log(`lines: ${lines}`);
+    }
+  }
+  printBenchmarkCommands({ fixture: resolvedFixture, onFile, offFile, apiPrefix });
+}
+
 function printStatus({ scope, settingsPath }) {
   const targetPath = getSettingsPath(scope, settingsPath);
+  const rawMode = String(process.env.TOKENLESS_MODE || 'on').trim() || 'on';
+  const disabled = /^(0|false|off|disabled)$/i.test(rawMode);
   console.log('TOKENLESS-STATUS/0.1');
   console.log(`scope: ${scope || 'custom'}`);
   console.log(`settings: ${targetPath}`);
+  console.log(`mode: ${disabled ? 'off' : 'on'}`);
+  console.log(`mode_source: ${process.env.TOKENLESS_MODE ? 'TOKENLESS_MODE' : 'default'}`);
+  console.log(`mode_raw: ${rawMode}`);
   console.log(`settings_exists: ${fs.existsSync(targetPath) ? 'yes' : 'no'}`);
 
   if (!fs.existsSync(targetPath)) {
@@ -1194,6 +1379,94 @@ function showArtifact(artifactId, dataDir) {
   if (artifact.stderr && !artifact.stderr.endsWith('\n')) process.stdout.write('\n');
 }
 
+function getExpandBudgetPath(dataDir) {
+  const base = path.resolve(dataDir || path.join(os.homedir(), '.tokenless'));
+  fs.mkdirSync(base, { recursive: true });
+  return path.join(base, 'expand_budget_index.json');
+}
+
+function readExpandBudgetIndex(dataDir) {
+  const indexPath = getExpandBudgetPath(dataDir);
+  if (!fs.existsSync(indexPath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function writeExpandBudgetIndex(dataDir, index) {
+  fs.writeFileSync(getExpandBudgetPath(dataDir), JSON.stringify(index || {}, null, 2), 'utf8');
+}
+
+function recordExpandLookup(dataDir, artifactId, artifact) {
+  if (!artifact || !artifact.meta || artifact.meta.reducer !== 'read-packet') {
+    return { count: 0, applies: false };
+  }
+
+  const index = readExpandBudgetIndex(dataDir);
+  const key = String(artifactId || artifact.meta.artifact_id || '');
+  const entry = index[key] || {
+    artifact_id: key,
+    created_at: new Date().toISOString(),
+    count: 0
+  };
+  entry.count = (Number(entry.count) || 0) + 1;
+  entry.updated_at = new Date().toISOString();
+  index[key] = entry;
+  writeExpandBudgetIndex(dataDir, index);
+  return { count: entry.count, applies: true };
+}
+
+function formatExpandWithBudget(expanded, budget) {
+  const body = expanded || 'No matching lines\n';
+  if (!budget.applies || budget.count <= 2) return body;
+
+  if (budget.count === 3) {
+    return [
+      'TOKENLESS-EXPAND-BUDGET-WARNING/0.1',
+      'Budget: this is the 3rd lookup for the same read packet.',
+      'Guidance: if this is a broad style/edit task, stop exploring and edit from the existing snippets.',
+      '',
+      body
+    ].join('\n');
+  }
+
+  const compactLines = String(body).split(/\r?\n/).slice(0, 28).join('\n');
+  return [
+    'TOKENLESS-EXPAND-BUDGET-COMPACT/0.1',
+    `Budget: lookup #${budget.count} for the same read packet.`,
+    'Guidance: continuing to inspect is likely more expensive than editing. This lookup is compacted, not blocked.',
+    'Escape hatch: if the user requested exact review/security/legal/syntax validation, run the same expand again only after explaining why the extra context is required.',
+    '',
+    compactLines,
+    compactLines.endsWith('\n') ? '' : '\n'
+  ].join('\n');
+}
+
+function formatReadReusePacket({ filePath, dataDir, state }) {
+  const entry = state && state.entry ? state.entry : {};
+  const artifactId = entry.artifact_id || '(unknown)';
+  const commandPrefix = `node ${shellQuote(__filename)}`;
+  const dataDirPart = ` --data-dir ${shellQuote(dataDir)}`;
+  return [
+    'TOKENLESS-READ-REUSE/0.1',
+    '',
+    `File: ${filePath}`,
+    `Existing artifact: ${artifactId}`,
+    'Reason: this file already has a fresh read packet; creating another packet usually expands model trajectory without adding information.',
+    '',
+    'Next actions:',
+    '- Edit/MultiEdit from the existing packet snippets when possible.',
+    '- If exact text is missing, use at most two targeted expand lookups:',
+    `  1. ${commandPrefix} expand ${artifactId} --around "<selector-or-text>"${dataDirPart}`,
+    `  2. ${commandPrefix} expand ${artifactId} --lines <start:end>${dataDirPart}`,
+    '- Do not rerun tokenless read for this file unless Tokenless reports TOKENLESS-STALE or the file changed.',
+    ''
+  ].join('\n');
+}
+
 function expandArtifact(artifactId, keyword, dataDir) {
   const resolvedArtifactId = resolveArtifactId(artifactId, dataDir);
   const artifact = readArtifact(dataDir, resolvedArtifactId);
@@ -1208,7 +1481,8 @@ function expandArtifact(artifactId, keyword, dataDir) {
   }
 
   const expanded = expandArtifactAround(artifact, keyword);
-  process.stdout.write(expanded || 'No matching lines\n');
+  const budget = recordExpandLookup(dataDir, resolvedArtifactId, artifact);
+  process.stdout.write(formatExpandWithBudget(expanded, budget));
 }
 
 function expandArtifactByLines(artifactId, lines, dataDir) {
@@ -1225,7 +1499,8 @@ function expandArtifactByLines(artifactId, lines, dataDir) {
   }
 
   const expanded = expandArtifactLines(artifact, lines);
-  process.stdout.write(expanded || 'No matching lines\n');
+  const budget = recordExpandLookup(dataDir, resolvedArtifactId, artifact);
+  process.stdout.write(formatExpandWithBudget(expanded, budget));
 }
 
 function formatPercent(numerator, denominator) {
@@ -1895,13 +2170,15 @@ function printApiUsage({ source, since }) {
 
 function printApiProbe({ action, dir, dataDir, keyword, showSnippet }) {
   if (action === 'start') {
+    fs.mkdirSync(dir, { recursive: true });
     console.log('TOKENLESS-API-PROBE/0.1');
     console.log('action: start');
     console.log(`dir: ${dir}`);
     console.log('');
     console.log('Run these before starting Claude Code:');
+    console.log(`export TOKENLESS_API_PROBE_DIR=${shellQuote(dir)}`);
     console.log(`export CLAUDE_CODE_ENABLE_TELEMETRY=1`);
-    console.log(`export OTEL_LOG_RAW_API_BODIES=file:${dir}`);
+    console.log('export OTEL_LOG_RAW_API_BODIES="file:$TOKENLESS_API_PROBE_DIR"');
     console.log('');
     console.log('Warning: raw API bodies can contain full prompts, tool outputs, and sensitive context. Use temporarily and keep local.');
     return;
@@ -2162,6 +2439,16 @@ async function main() {
       process.exit(0);
     }
 
+    const existingPacket = getReadPacketState(parsed.dataDir, parsed.filePath);
+    if (existingPacket.status === 'valid' && existingPacket.entry && existingPacket.entry.artifact_id) {
+      process.stdout.write(formatReadReusePacket({
+        filePath: parsed.filePath,
+        dataDir: parsed.dataDir,
+        state: existingPacket
+      }));
+      process.exit(0);
+    }
+
     const artifactId = formatArtifactId();
     const packet = summarizeRead({
       filePath: parsed.filePath,
@@ -2294,6 +2581,12 @@ async function main() {
   if (command === 'api-probe') {
     const parsed = parseApiProbeArgs(args.slice(1));
     printApiProbe(parsed);
+    process.exit(0);
+  }
+
+  if (command === 'benchmark-copy') {
+    const parsed = parseBenchmarkCopyArgs(args.slice(1));
+    benchmarkCopy(parsed);
     process.exit(0);
   }
 

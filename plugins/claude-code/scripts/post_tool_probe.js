@@ -5,6 +5,14 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+function isTokenlessDisabled() {
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+}
+
+if (isTokenlessDisabled()) {
+  process.exit(0);
+}
+
 function estimateTokens(text) {
   if (typeof text !== 'string') return 0;
   if (!text) return 0;

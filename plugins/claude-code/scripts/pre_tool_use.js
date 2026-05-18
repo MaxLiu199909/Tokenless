@@ -11,10 +11,19 @@ const {
   getReadGate,
   getReadPacket,
   getReadPacketState,
+  listReadPackets,
   findGateForCommand,
   extractFilePathCandidates,
   isLikelyFileAccessCommand
 } = require('../lib/read_gate');
+
+function isTokenlessDisabled() {
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+}
+
+if (isTokenlessDisabled()) {
+  process.exit(0);
+}
 
 function shellQuote(value) {
   return `'${String(value).replace(/'/g, "'\\''")}'`;
@@ -90,6 +99,17 @@ function writeDeny(reason) {
   );
 }
 
+function denyForBashWriteGuard({ filePath, detail }) {
+  writeDeny([
+    'TOKENLESS-BASH-WRITE-GUARD/0.1',
+    `File: ${filePath}`,
+    detail ? `Detail: ${detail}` : null,
+    'Reason: Bash appears to write a large summarized file.',
+    'Blocked: tool did not run.',
+    'Use Edit/MultiEdit for bounded file edits.'
+  ].filter(Boolean).join('\n'));
+}
+
 function denyForLargeGeneratedInput({ kind, detail, command }) {
   const length = command ? String(command).length : 0;
   const dataDir = getDataDir();
@@ -142,19 +162,127 @@ function isLargeGeneratedWriteInput(toolName, toolInput) {
   return null;
 }
 
+function extractCommandCwds(command, toolInput) {
+  const out = new Set();
+  const add = (value) => {
+    if (!value || typeof value !== 'string') return;
+    try {
+      out.add(path.resolve(value));
+    } catch (err) {
+      // Ignore invalid cwd hints.
+    }
+  };
+
+  add(process.cwd());
+  add(toolInput.cwd || toolInput.workdir || toolInput.working_directory);
+
+  const text = String(command || '');
+  const cdRe = /(?:^|[;&|]\s*)cd\s+(['"])(.*?)\1|(?:^|[;&|]\s*)cd\s+([^\s;&|]+)/g;
+  let match;
+  while ((match = cdRe.exec(text)) !== null) {
+    add(match[2] || match[3]);
+  }
+  return Array.from(out);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function quotedOrBareRefPattern(ref) {
+  const escaped = escapeRegExp(ref);
+  return `(?:${escaped}|${escapeRegExp(shellQuote(ref))}|"${escaped}")`;
+}
+
+function fileRefTerminator() {
+  return `(?=$|[\\s'"\\)\\];,&|])`;
+}
+
+function packetCommandContext(packet, command, toolInput) {
+  const normalized = path.resolve(packet.file_path);
+  const base = path.basename(normalized);
+  const dir = path.dirname(normalized);
+  const activeDir = extractCommandCwds(command, toolInput).some((cwd) => cwd === dir);
+  return { normalized, base, dir, activeDir };
+}
+
+function commandMentionsPacketFile(command, packet, toolInput) {
+  const text = String(command || '');
+  const { normalized, base, activeDir } = packetCommandContext(packet, command, toolInput);
+  const directRef = new RegExp(`${quotedOrBareRefPattern(normalized)}${fileRefTerminator()}`);
+  if (directRef.test(text)) return true;
+
+  if (!activeDir) return false;
+
+  const localRefs = [
+    quotedOrBareRefPattern(base),
+    quotedOrBareRefPattern(`./${base}`)
+  ].join('|');
+  return new RegExp(`(?:^|[\\s'"\\(=])(?:${localRefs})${fileRefTerminator()}`).test(text);
+}
+
+function fileRefPatternForPacket(packet, command, toolInput) {
+  const { normalized, base, activeDir } = packetCommandContext(packet, command, toolInput);
+  const refs = [quotedOrBareRefPattern(normalized)];
+  if (activeDir) {
+    refs.push(quotedOrBareRefPattern(base));
+    refs.push(quotedOrBareRefPattern(`./${base}`));
+  }
+  return `(?:${refs.join('|')})`;
+}
+
+function isBashWritePattern(command, packet, toolInput) {
+  const text = String(command || '');
+  if (!commandMentionsPacketFile(text, packet, toolInput)) return null;
+
+  const base = escapeRegExp(path.basename(packet.file_path));
+  const fileRef = fileRefPatternForPacket(packet, command, toolInput);
+  const terminator = fileRefTerminator();
+
+  const patterns = [
+    { name: 'cp-backup', re: new RegExp(`\\bcp\\b[^\\n;&|]*${fileRef}${terminator}[^\\n;&|]*${base}\\.(?:bak|backup|orig|old)\\b`) },
+    { name: 'redirect-write', re: new RegExp(`(?:>|>>)[\\s'"]*${fileRef}${terminator}`) },
+    { name: 'tee-write', re: new RegExp(`\\btee\\b[^\\n;&|]*${fileRef}${terminator}`) },
+    { name: 'python-open-write', re: /open\([^)]*,\s*['"][wa+][^'"]*['"]/ },
+    { name: 'path-write-text', re: /\.(?:write_text|write_bytes)\s*\(/ },
+    { name: 'node-write-file', re: /\b(?:writeFileSync|writeFile|appendFileSync|appendFile)\s*\(/ }
+  ];
+
+  const hit = patterns.find((item) => item.re.test(text));
+  return hit ? hit.name : null;
+}
+
+function findBashWriteToReadPacket(command, dataDir, toolInput) {
+  const packets = listReadPackets(dataDir)
+    .filter((packet) => packet && packet.file_path);
+
+  for (const packet of packets) {
+    const detail = isBashWritePattern(command, packet, toolInput);
+    if (detail) {
+      return { filePath: packet.file_path, detail };
+    }
+  }
+  return null;
+}
+
 function denyForReadGate(gate, context) {
   const stale = gate && gate.stale_packet;
+  if (stale) {
+    writeDeny([
+      'TOKENLESS-STALE/0.1',
+      `File: ${gate.file_path}`,
+      stale.reason ? `Reason: ${stale.reason}` : 'Reason: file summary is stale',
+      'Blocked: tool did not run.',
+      `Next: ${gate.required_command}`
+    ].filter(Boolean).join('\n'));
+    return;
+  }
+
   writeDeny([
-    stale ? 'TOKENLESS-STALE/0.1' : 'TOKENLESS-GATE/0.1',
-    stale ? 'Reason: file changed after read packet' : 'Reason: large file needs Tokenless read packet',
+    'TOKENLESS-GATE/0.1',
     `File: ${gate.file_path}`,
     `Estimated tokens: ${gate.estimated_tokens}`,
-    stale && stale.artifact_id ? `Previous artifact: ${stale.artifact_id}` : null,
-    stale && stale.reason ? `Stale reason: ${stale.reason}` : null,
-    stale ? 'Blocked tool did not execute or change the file.' : null,
     `Next: ${gate.required_command}`,
-    'Then expand only needed lines and use small bounded edits.',
-    'Avoid large patch scripts, heredocs, or broad rewrites unless the user asks.',
     context ? `Context: ${context}` : ''
   ].filter(Boolean).join('\n'));
 }
@@ -313,6 +441,13 @@ function main() {
   if (isTokenlessCommand(command)) {
     trace({ event: 'skip', reason: 'tokenless-recursion', command });
     process.exit(0);
+  }
+
+  const bashWriteGuard = findBashWriteToReadPacket(command, dataDir, toolInput);
+  if (bashWriteGuard) {
+    trace({ event: 'deny', reason: 'bash-write-read-packet-file', command, filePath: bashWriteGuard.filePath, detail: bashWriteGuard.detail });
+    denyForBashWriteGuard(bashWriteGuard);
+    return;
   }
 
   const largeBashDetail = isLargeGeneratedBashInput(command);

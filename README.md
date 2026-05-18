@@ -12,11 +12,11 @@ The current wire format is `TOKENLESS-PACKET/0.1`.
 - Build and CI logs: `npm run build`, `docker build`, `kubectl logs`
 - Diffs: `git diff`, `git log`
 - Search and tree output: `rg`, `grep -R`, `find`, `tree`, `ls -R`
-- Large low-risk reads: CSS, HTML, JSON, logs, docs, generated files
+- Large low-risk reads: CSS, HTML, JSON, logs, docs, generated files, and large JS/TS source files
 - Large successful edit/write tool results: conservative `TOKENLESS-EDIT-PACKET` / `TOKENLESS-WRITE-PACKET`
 - Fallback compression for unexpectedly huge Bash output
 
-Small bounded commands such as `rg -m 20`, `find ... | head`, `cat file | grep`, and `tree | head` are allowed through directly. Small reads and source-code reads are not compressed by default.
+Small bounded commands such as `rg -m 20`, `find ... | head`, `cat file | grep`, and `tree | head` are allowed through directly. Small reads are not compressed by default. JS/TS source reads are only compressed when they cross the large-source threshold.
 
 ## How it works
 
@@ -38,8 +38,9 @@ Tokenless can cap large low-risk `Read` outputs as `TOKENLESS-READ-PACKET/0.1`.
 Default policy:
 
 - Compress low-risk reads over roughly 4000 estimated tokens: CSS, HTML, JSON, logs, docs, lockfiles, generated files.
+- Compress large JS/TS/React source reads over roughly 30000 estimated tokens with source-oriented packets.
 - Do not compress small files.
-- Do not compress source files such as `.js`, `.ts`, `.py`, `.go`, `.rs` by default.
+- Do not compress other source files such as `.py`, `.go`, `.rs` by default.
 
 Read packets are indexes, not edit evidence. If a model needs to modify exact code or style, it must expand the relevant lines first:
 
@@ -154,6 +155,7 @@ tokenless api-usage --since 24h
 tokenless show latest --data-dir ~/.tokenless
 tokenless expand latest --around "Regression family 44" --data-dir ~/.tokenless
 tokenless clean --data-dir ~/.tokenless --keep 100 --dry-run
+tokenless benchmark-copy aurora-10k-tsx
 ```
 
 `tokenless stats` separates savings by source:
@@ -173,9 +175,9 @@ npm run tokenless:api-usage:24h
 Temporary raw API body probe, for local verification only:
 
 ```bash
-node plugins/claude-code/bin/tokenless api-probe start --dir ~/.tokenless/api-bodies
-node plugins/claude-code/bin/tokenless api-probe inspect --dir ~/.tokenless/api-bodies --keyword originalFile
-node plugins/claude-code/bin/tokenless api-probe stats --dir ~/.tokenless/api-bodies
+node plugins/claude-code/bin/tokenless api-probe start --name my-benchmark
+node plugins/claude-code/bin/tokenless api-probe inspect --dir "$TOKENLESS_API_PROBE_DIR" --keyword originalFile
+node plugins/claude-code/bin/tokenless api-probe stats --dir "$TOKENLESS_API_PROBE_DIR"
 node plugins/claude-code/bin/tokenless api-probe stop
 ```
 
@@ -207,16 +209,29 @@ This prints `TOKENLESS-REAL-CHECK/0.1` with:
 
 ## Benchmarks
 
-Real Claude Code fuzzy UI edit benchmark:
+These are real Claude Code API-body measurements from fuzzy UI-edit tasks. The
+main metric is estimated request-body tokens from raw API request logs, not local
+hook-side savings estimates.
 
-```text
-Tokenless ON:  519,293 estimated request-body tokens
-Tokenless OFF: 2,822,541 estimated request-body tokens
-Net saved:     2,303,248 estimated request-body tokens
-Reduction:     81.6%
-```
+| Scenario | Tokenless OFF | Tokenless ON | Request reduction |
+| --- | ---: | ---: | ---: |
+| Large CSS visual edit | 1,017,642 | 403,995-473,354 | ~54-60% |
+| 10k-line React/TSX edit | 917,137 | 545,456 | 40.5% |
 
-See [benchmarks/fuzzy-ui-edit.md](benchmarks/fuzzy-ui-edit.md).
+The CSS task is the strongest path today: large style files have stable editable
+summaries, and repeated runs reduced request-body tokens from about 1.02M to
+about 0.40M-0.47M.
+
+The 10k-line React/TSX task shows the large-source path working in a realistic
+single-file app edit: request-body tokens dropped from 917,137 to 545,456 in a
+clean true-OFF comparison. TSX gains are real but more trajectory-sensitive than
+CSS because the model may carry the read packet through many follow-up requests.
+
+A valid OFF run must show `TOKENLESS-READ-PACKET: request=0` and
+`request_saved_estimate: 0`; otherwise it is not a true OFF comparison.
+
+See [docs/benchmarking.md](docs/benchmarking.md) for the benchmark protocol,
+raw API capture setup, true-OFF checks, and caveats.
 
 ## Claude Code hook setup
 

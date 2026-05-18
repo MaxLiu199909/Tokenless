@@ -11,8 +11,10 @@ pnpm-debug.log*
 artifacts/
 
 # Claude Code local workspace settings
+.claude/settings.json
 .claude/settings.local.json
 .claude/*.bak*
+claude-*.sh
 
 # Temporary eval output
 tmp/

@@ -13,6 +13,15 @@ const os = require('os');
 const EDIT_PACKET_THRESHOLD = 3000;
 const WRITE_PACKET_THRESHOLD = 5000;
 const RISKY_EDIT_OUTPUT_RE = /\b(error|failed|failure|old_string|not found|multiple matches|ambiguous|permission|denied|conflict|no changes|partial|exception|traceback)\b/i;
+const FAILED_TOOL_OUTPUT_RE = /\b(error editing file|file must be read first|old_string not found|string to replace not found|found multiple matches|no changes made|tool failed|edit failed|operation failed|permission denied|traceback \(most recent call last\))/i;
+
+function isTokenlessDisabled() {
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+}
+
+if (isTokenlessDisabled()) {
+  process.exit(0);
+}
 
 function getTokenlessCliPath() {
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..');
@@ -133,6 +142,21 @@ function isRiskyToolResponse(response, responseText) {
   }
 
   return RISKY_EDIT_OUTPUT_RE.test(responseText || '');
+}
+
+function isFailedToolResponse(response, responseText) {
+  if (response && typeof response === 'object') {
+    if (response.is_error || response.error || response.failed || response.success === false) {
+      return true;
+    }
+
+    const status = String(response.status || '').toLowerCase();
+    if (status && !['success', 'succeeded', 'ok'].includes(status)) {
+      return true;
+    }
+  }
+
+  return FAILED_TOOL_OUTPUT_RE.test(responseText || '');
 }
 
 function isRiskyWritePath(filePath) {
@@ -268,9 +292,10 @@ function compactEditLikeTool(toolName, toolInput, response) {
   const responseText = safeJson(response);
   const beforeTokens = estimateTokens(responseText);
   const threshold = toolName === 'Write' ? WRITE_PACKET_THRESHOLD : EDIT_PACKET_THRESHOLD;
+  const failed = isFailedToolResponse(response, responseText);
   const risky = isRiskyToolResponse(response, responseText);
 
-  if (!risky && isSmallEditForLease(toolName, toolInput)) {
+  if (!failed && isSmallEditForLease(toolName, toolInput)) {
     const lease = refreshReadPacketAfterSmallEdit({ dataDir, filePath, toolName });
     trace({ event: lease.updated ? 'refresh-edit-lease' : 'skip-edit-lease-refresh', reason: lease.reason, toolName, filePath, edits: lease.edits, max_edits: lease.max_edits });
   }
