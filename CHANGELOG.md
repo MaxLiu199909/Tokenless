@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.1 - 2026-05-18
+
+### Changed
+
+- Prepared npm publishing by removing the private package flag.
+- Added an npm `files` whitelist so local API body captures, benchmark scratch directories, and private launcher scripts stay out of published packages.
+
 ## v0.2.0 - 2026-05-18
 
 ### Added
