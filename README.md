@@ -368,17 +368,20 @@ This writes `~/.claude/settings.json`, merges with existing hooks, and creates a
 Optional slash commands:
 
 ```bash
-npm run tokenless:install-commands
+tokenless install-commands --user
 ```
 
 This installs user-level Claude Code commands:
 
 ```text
 /tokenless
-/tokenless-mode
+/tokenless style <terse|caveman|reviewer|wenyan|off>
 ```
 
-`/tokenless` shows local compression savings and the latest artifact. `/tokenless-mode` is reserved for future output discipline modes such as terse, caveman, reviewer, and wenyan.
+- `/tokenless` shows a compact Tokenless dashboard: hook status, mode, savings, packet counts, pending gates, and latest artifact.
+- `/tokenless style ...` is reserved for future output style profiles such as `terse`, `caveman`, `reviewer`, and `wenyan`. It does not change compression behavior yet.
+
+Restart Claude Code after installing slash commands. If you previously installed an older Tokenless command set, `tokenless uninstall-commands --user` removes the current `/tokenless` command and old placeholders such as `/tokenless-mode`, `/tokenless-latest`, `/tokenless-expand`, and `/tokenless-doctor`.
 
 Check install status:
 

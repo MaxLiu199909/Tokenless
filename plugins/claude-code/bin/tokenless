@@ -1074,59 +1074,43 @@ function buildSlashCommands({ cliPath, dataDir }) {
   return {
     'tokenless.md': [
       '---',
-      'description: Show Tokenless local compression savings and latest artifact',
+      'description: Show Tokenless status, savings, and latest artifact',
+      'argument-hint: "[style <terse|caveman|reviewer|wenyan|off>]"',
       'allowed-tools: Bash',
       '---',
       '',
-      'Show local Tokenless status, compression savings, and latest artifact.',
+      'If the first argument is `style`, do not change settings yet. Explain briefly:',
+      '',
+      '```text',
+      '/tokenless style is reserved for future output style profiles.',
+      'Planned styles: terse, caveman, reviewer, wenyan, off.',
+      'It does not change Tokenless compression behavior yet.',
+      '```',
+      '',
+      'Otherwise, show a compact Tokenless dashboard.',
       '',
       'Run these commands:',
       '',
-      `1. \`node ${cli} stats --data-dir ${dir}\``,
-      `2. \`node ${cli} latest --data-dir ${dir}\``,
-      `3. \`node ${cli} status --user\``,
-      `4. \`node ${cli} api-usage --since 24h\``,
-      `5. \`node ${cli} api-probe stats --dir ${shellQuote(path.join(os.homedir(), '.tokenless', 'api-bodies-realtest'))} --data-dir ${dir}\``,
+      `1. \`node ${cli} status --user\``,
+      `2. \`node ${cli} stats --data-dir ${dir}\``,
+      `3. \`node ${cli} latest --data-dir ${dir}\``,
       '',
       'Then answer compactly in this shape:',
       '',
       '```text',
       'Tokenless:',
       '- hooks: installed|not installed',
-      '- calls: <n>',
-      '- local_saved: <tokens_saved> tokens (hook-local before -> after; good for product/demo)',
+      '- mode: on|off and source',
+      '- local_saved: <tokens_saved> tokens',
       '- local_ratio: <compression_ratio>',
-      '- source: hook=<calls/saved>, eval=<calls/saved>, smoke=<calls/saved>',
-      '- real_hook: <hook calls and saved tokens>',
-      '- api_confirmed: unique_artifacts=<n>, unique_saved=<n>, request_saved_estimate=<n>, caveat=not billing',
-      '- api_evidence: request_tokens=<n>, read_packet=<request matches>, edit_packet=<request matches>, raw_edit_payload=<request matches>',
-      '- read_packet: <read-packet calls and saved tokens if present; API-confirmed when request matches exist>',
-      '- edit_packet: <edit-packet calls and saved tokens if present; hook-local unless API request matches exist>',
-      '- write_packet: <write-packet calls and saved tokens if present; hook-local unless API request matches exist>',
-      '- gates: pending=<n>, packet_index=<n>',
-      '- api_24h: <total_tokens> tokens',
+      '- sources: hook=<saved>, eval=<saved>, smoke=<saved>',
+      '- read/edit/write packets: <counts and saved tokens>',
+      '- gates: pending=<n>',
       '- latest: <artifact_id or none>',
       '- expand: <exact expand command if latest exists>',
       '```',
       '',
       'Do not expand raw artifacts unless the user asks for details.'
-    ].join('\n'),
-    'tokenless-mode.md': [
-      '---',
-      'description: Configure Tokenless output discipline mode (reserved)',
-      'argument-hint: "[terse|caveman|reviewer|wenyan|off]"',
-      'allowed-tools: Bash',
-      '---',
-      '',
-      'Tokenless output discipline modes are reserved for a future release.',
-      '',
-      'For now, do not write settings or change behavior. Explain briefly:',
-      '',
-      '```text',
-      'Tokenless mode switching is not implemented yet.',
-      'Planned modes: terse, caveman, reviewer, wenyan, off.',
-      'Current command is a placeholder so the UI surface is stable.',
-      '```'
     ].join('\n')
   };
 }
@@ -1160,13 +1144,13 @@ function installSlashCommands({ dataDir, commandsDir, dryRun }) {
 
   if (!dryRun) {
     console.log('installed: yes');
-    console.log('restart Claude Code to load /tokenless and /tokenless-mode');
+    console.log('restart Claude Code to load /tokenless');
   }
 }
 
 function uninstallSlashCommands({ commandsDir, dryRun }) {
   const targetDir = getSlashCommandsDir({ commandsDir });
-  const files = ['tokenless.md', 'tokenless-mode.md'];
+  const files = ['tokenless.md', 'tokenless-latest.md', 'tokenless-expand.md', 'tokenless-doctor.md', 'tokenless-mode.md'];
 
   console.log('TOKENLESS-UNINSTALL-COMMANDS/0.1');
   console.log('scope: user');

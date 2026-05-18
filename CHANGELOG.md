@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Reworked Claude Code slash commands into one top-level `/tokenless` command.
+- Reserved `/tokenless style <terse|caveman|reviewer|wenyan|off>` as the future output-style profile entry point.
+- Stopped installing placeholder or overly granular slash commands; uninstall now also removes older `/tokenless-mode`, `/tokenless-latest`, `/tokenless-expand`, and `/tokenless-doctor` files if present.
+
 ## v0.2.1 - 2026-05-18
 
 ### Changed

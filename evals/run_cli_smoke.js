@@ -57,6 +57,15 @@ function main() {
     throw new Error(`launch allow: unexpected --disallowedTools\n${taskLaunch}`);
   }
 
+  const commands = run(['install-commands', '--dry-run', '--commands-dir', tmpRoot]);
+  assertContains(commands, 'TOKENLESS-INSTALL-COMMANDS/0.1', 'install-commands');
+  assertContains(commands, 'would install: /tokenless ', 'install-commands');
+  for (const oldCommand of ['/tokenless-mode', '/tokenless-latest', '/tokenless-expand', '/tokenless-doctor']) {
+    if (commands.includes(`would install: ${oldCommand} `)) {
+      throw new Error(`install-commands: unexpected old command install ${oldCommand}\n${commands}`);
+    }
+  }
+
   if (fs.existsSync(originalFixture)) {
     const copy = run(['benchmark-copy', 'aurora-10k-tsx', '--out-root', tmpRoot, '--name', 'aurora-smoke']);
     assertContains(copy, 'TOKENLESS-BENCHMARK-COPY/0.1', 'benchmark-copy');
