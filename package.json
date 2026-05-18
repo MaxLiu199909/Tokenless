@@ -2,7 +2,6 @@
   "name": "tokenless",
   "version": "0.2.0",
   "description": "Tokenless context compression for noisy Claude Code tool output",
-  "private": true,
   "type": "commonjs",
   "license": "MIT",
   "bin": {
@@ -75,5 +74,25 @@
     "acc:uninstall-hooks:project:dry-run": "node plugins/claude-code/bin/tokenless uninstall-hooks --project --dry-run",
     "acc:clean:dry-run": "node plugins/claude-code/bin/tokenless clean --keep 100 --dry-run",
     "test:complex": "node evals/run_complex_test_log_case.js --emit"
-  }
+  },
+  "files": [
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json",
+    "plugins/claude-code/.claude-plugin/plugin.json",
+    "plugins/claude-code/bin/**",
+    "plugins/claude-code/hooks/**",
+    "plugins/claude-code/lib/**",
+    "plugins/claude-code/scripts/**",
+    "plugins/claude-code/skills/**",
+    "commands/**",
+    "docs/**",
+    "spec/**",
+    "benchmarks/**",
+    "scripts/real_check.js",
+    "evals/fixtures/**",
+    "evals/cases/real/**",
+    "evals/*.js"
+  ]
 }
