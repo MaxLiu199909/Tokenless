@@ -32,7 +32,7 @@
 
 ```bash
 npm install -g github:MaxForAI/Tokenless
-tokenless install-hooks --user
+tokenless repair-hooks --user
 tokenless install-commands --user
 tokenless launch
 ```
@@ -127,7 +127,7 @@ Tokenless 现在主要处理 Claude Code 里的工具输出、文件读取和回
 
 ```bash
 npm install -g github:MaxForAI/Tokenless
-tokenless install-hooks --user
+tokenless repair-hooks --user
 tokenless launch
 ```
 
@@ -140,7 +140,7 @@ git clone https://github.com/MaxForAI/Tokenless.git
 cd Tokenless
 npm install
 npm link
-tokenless install-hooks --user
+tokenless repair-hooks --user
 tokenless launch
 ```
 

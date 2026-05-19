@@ -38,7 +38,7 @@
 
 ```bash
 npm install -g github:MaxForAI/Tokenless
-tokenless install-hooks --user
+tokenless repair-hooks --user
 tokenless install-commands --user
 tokenless launch
 ```
@@ -129,7 +129,7 @@ Install from GitHub:
 
 ```bash
 npm install -g github:MaxForAI/Tokenless
-tokenless install-hooks --user
+tokenless repair-hooks --user
 tokenless launch
 ```
 
@@ -142,7 +142,7 @@ git clone https://github.com/MaxForAI/Tokenless.git
 cd Tokenless
 npm install
 npm link
-tokenless install-hooks --user
+tokenless repair-hooks --user
 tokenless launch
 ```
 
