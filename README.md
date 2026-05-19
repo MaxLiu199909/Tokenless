@@ -136,8 +136,6 @@ Claude Code slash command shortcuts:
 
 The selected profile is stored at `~/.tokenless/style.json` by default and persists across Claude Code restarts.
 
-Compatibility aliases such as `lean`, `silent`, `wire`, `dense`, and `dense2` are accepted, but the public surface is `chat`, `coding`, and `off`.
-
 `TOKENLESS_MODE=off` remains available as an environment-level hard-off switch for benchmark runs.
 
 ## How it works

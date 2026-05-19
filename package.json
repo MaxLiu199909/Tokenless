@@ -45,7 +45,7 @@
     "tokenless:api-usage": "node plugins/claude-code/bin/tokenless api-usage",
     "tokenless:api-usage:24h": "node plugins/claude-code/bin/tokenless api-usage --since 24h",
     "tokenless:api-probe:start": "node plugins/claude-code/bin/tokenless api-probe start",
-    "tokenless:api-probe:stats": "node plugins/claude-code/bin/tokenless api-probe stats --dir /Users/mac/.tokenless/api-bodies-realtest",
+    "tokenless:api-probe:stats": "node plugins/claude-code/bin/tokenless api-probe stats --dir \"$TOKENLESS_API_PROBE_DIR\"",
     "tokenless:real-check": "node scripts/real_check.js",
     "tokenless:status:project": "node plugins/claude-code/bin/tokenless status --project",
     "tokenless:launch": "node plugins/claude-code/bin/tokenless launch",
