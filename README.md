@@ -5,7 +5,7 @@
 <h1 align="center">Tokenless</h1>
 
 <p align="center">
-  <strong>Use fewer Claude Code tokens without losing the raw evidence.</strong>
+  <strong>One command to cut token usage by up to 50%+.</strong>
 </p>
 
 <p align="center">
