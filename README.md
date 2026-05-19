@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/tokenless-logo.png" width="116" alt="Tokenless faucet logo" />
+  <img src="assets/tokenless-logo.png" width="220" alt="Tokenless faucet logo" />
 </p>
 
 <h1 align="center">Tokenless</h1>
