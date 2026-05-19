@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MaxLiu199909/Tokenless.git"
+    "url": "git+https://github.com/MaxForAI/Tokenless.git"
   },
   "bugs": {
-    "url": "https://github.com/MaxLiu199909/Tokenless/issues"
+    "url": "https://github.com/MaxForAI/Tokenless/issues"
   },
-  "homepage": "https://github.com/MaxLiu199909/Tokenless#readme",
+  "homepage": "https://github.com/MaxForAI/Tokenless#readme",
   "keywords": [
     "tokenless",
     "claude-code",

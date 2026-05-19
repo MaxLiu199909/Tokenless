@@ -1,28 +1,94 @@
-# Tokenless
+<p align="center">
+  <img src="assets/tokenless-mark.svg" width="116" alt="Tokenless mark" />
+</p>
 
-Tokenless is a Claude Code plugin for capping noisy tool output before it enters model context.
+<h1 align="center">Tokenless</h1>
 
-It is not a generic summarizer. Tokenless keeps raw output as a local artifact and sends Claude a compact evidence packet with enough signal to continue the task.
+<p align="center">
+  <strong>Use fewer Claude Code tokens without losing the raw evidence.</strong>
+</p>
 
-The current wire format is `TOKENLESS-PACKET/0.1`.
+<p align="center">
+  <a href="#verified-results"><img alt="vibe coding request reduction" src="https://img.shields.io/badge/vibe%20coding-47.3%25%20less%20request%20tokens-2dd4bf?style=for-the-badge"></a>
+  <a href="#output-profiles"><img alt="chat response reduction" src="https://img.shields.io/badge/chat-80.0%25%20less%20response%20tokens-4ade80?style=for-the-badge"></a>
+  <a href="LICENSE"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-f59e0b?style=for-the-badge"></a>
+</p>
 
-## Quickstart
+<p align="center">
+  <a href="#before--after">Before / After</a> ·
+  <a href="#installation">Install</a> ·
+  <a href="#output-profiles">Profiles</a> ·
+  <a href="#verified-results">Benchmarks</a> ·
+  <a href="docs/benchmarking.md">Full benchmark guide</a>
+</p>
+
+---
+
+Tokenless is a Claude Code plugin for reducing API context growth during coding workflows. It intercepts noisy tool output before it enters model context, stores the raw output locally, and sends Claude a compact evidence packet.
+
+It also provides output profiles that make Claude responses shorter for everyday chat and denser for coding sessions.
+
+Tokenless is not an LLM summarizer and does not send data to a separate service. Reducers are deterministic and local. Raw artifacts stay on disk and can be expanded only when needed.
+
+Current packet format: `TOKENLESS-PACKET/0.1`.
+
+## Before / After
+
+| Normal Claude Code | Claude Code with Tokenless |
+| --- | --- |
+| Reads a large file or log into future context repeatedly. | Stores the raw output locally and sends a compact packet. |
+| Verbose final replies become part of the next request history. | `chat` and `coding` profiles keep replies short. |
+| Agent trajectory can grow through repeated exploration and task-plan history. | Launcher trims Task/Plan tools by default; packets reduce large read context. |
+
+Example large-read replacement:
+
+| Raw context | Tokenless context |
+| --- | --- |
+| Full file/log output is carried through API requests. | `TOKENLESS-READ-PACKET/0.1` with artifact id, imports, symbols, snippets, nearby files, and exact expansion commands. |
+
+## Why Tokenless
+
+Claude Code sessions can become expensive because tool outputs, file reads, task-plan history, and verbose assistant replies are repeatedly carried through future API requests. Tokenless targets three sources of growth:
+
+- Large tool output: test logs, build logs, search results, tree output, diffs, large reads, and large successful edit/write results.
+- Agent trajectory overhead: repeated request context, high-overhead Task/Plan tools, and large raw file payloads.
+- Response verbosity: optional `chat` and `coding` profiles reduce assistant output tokens.
+
+## Verified results
+
+These are real Claude Code API-body measurements. The primary metric is estimated request-body tokens from raw API request logs, not local hook-side savings estimates.
+
+| Scenario | Baseline | Tokenless | Reduction |
+| --- | ---: | ---: | ---: |
+| Large CSS visual edit | 1,017,642 request tokens | 403,995-473,354 | ~54-60% |
+| 10k-line React/TSX edit | 917,137 request tokens | 545,456 | 40.5% |
+| Multifile React dashboard | 628,261 request tokens | 512,521 | 18.4% |
+| Task/Plan tools enabled vs default launcher | 1,524,894 request tokens | 1,087,753 | 28.7% |
+| 5-turn CRM vibe coding, `off` vs `coding` | 4,697,867 request tokens | 2,476,391 | 47.3% |
+| 6-turn natural conversation, `off` vs `chat` | 7,223 response tokens | 1,442 | 80.0% |
+
+The 5-turn CRM vibe-coding run is the strongest current product benchmark: a non-specialist user gave vague iterative product-polish prompts. The public `coding` profile reduced request tokens by 47.3%, response tokens by 44.4%, and request count by 39.3% versus clean `off`.
+
+The 6-turn natural-conversation run did not use file tools or packet reducers. It isolates the `chat` profile: response tokens dropped by 80.0%, and total API-body tokens dropped by 7.7%.
+
+Detailed methodology and raw run notes are in [docs/benchmarking.md](docs/benchmarking.md) and [docs/style-benchmark.md](docs/style-benchmark.md).
+
+## Installation
 
 Install from GitHub:
 
 ```bash
-npm install -g github:MaxLiu199909/Tokenless
+npm install -g github:MaxForAI/Tokenless
 tokenless install-hooks --user
 tokenless launch
 ```
 
-The package is currently distributed through GitHub releases and GitHub npm
-install. It has not been published to the public npm registry yet.
+Tokenless is currently distributed through GitHub. It has not been published to the public npm registry yet.
 
 For local development from a checkout:
 
 ```bash
-git clone https://github.com/MaxLiu199909/Tokenless.git
+git clone https://github.com/MaxForAI/Tokenless.git
 cd Tokenless
 npm install
 npm link
@@ -36,16 +102,58 @@ If Claude Code is not available as `claude` on your `PATH`, set `CLAUDE_BIN`:
 CLAUDE_BIN=/path/to/claude tokenless launch
 ```
 
-Check the active hook and mode:
+Check installation status:
 
 ```bash
 tokenless status --user
 ```
 
-## Minimal demo
+## Output profiles
 
-When Claude tries to read a large low-risk file, Tokenless keeps the raw file
-locally and sends a compact packet instead:
+Tokenless has three public profiles:
+
+| Profile | Behavior |
+| --- | --- |
+| `chat` | Default. Short, readable natural-language responses. Only changes output style. |
+| `coding` | Dense structured responses for coding workflows. Only changes output style. |
+| `off` | Full Tokenless hard-off. Disables style injection and compression hooks. |
+
+Set a profile:
+
+```bash
+tokenless style chat
+tokenless style coding
+tokenless style off
+```
+
+Claude Code slash command shortcuts:
+
+```text
+/tokenless-style-chat
+/tokenless-style-coding
+/tokenless-style-off
+```
+
+The selected profile is stored at `~/.tokenless/style.json` by default and persists across Claude Code restarts.
+
+Compatibility aliases such as `lean`, `silent`, `wire`, `dense`, and `dense2` are accepted, but the public surface is `chat`, `coding`, and `off`.
+
+`TOKENLESS_MODE=off` remains available as an environment-level hard-off switch for benchmark runs.
+
+## How it works
+
+For noisy commands and large outputs:
+
+```text
+Claude requests a noisy tool call
+  -> Tokenless intercepts it with Claude Code hooks
+  -> The original command or output is processed locally
+  -> Raw stdout/stderr or file content is saved as an artifact
+  -> Claude receives a compact TOKENLESS-* packet
+  -> Claude expands only the relevant artifact slice if needed
+```
+
+Example read packet:
 
 ```text
 TOKENLESS-READ-PACKET/0.1
@@ -54,7 +162,7 @@ artifact_id: ctx_20260518_abc123
 summary: large TSX source packet with imports, declarations, snippets, and nearby files
 ```
 
-The raw content is still available locally:
+Expand raw evidence when needed:
 
 ```bash
 tokenless latest --data-dir ~/.tokenless
@@ -62,91 +170,64 @@ tokenless expand latest --around "DashboardShell" --data-dir ~/.tokenless
 tokenless expand latest --lines 120:170 --data-dir ~/.tokenless
 ```
 
-For a local smoke demo without launching Claude Code:
+The shorter `acc` command remains available as a compatibility alias. `tokenless` is the preferred public command.
 
-```bash
-npm run eval:complex
-```
+## What Tokenless handles
 
-## Contributors
+Tokenless currently handles:
 
-- Max Liu
-- Codex, AI coding assistant
+- Test logs: `npm test`, `pytest`, `go test`, `cargo test`.
+- Build and CI logs: `npm run build`, `docker build`, `kubectl logs`.
+- Diffs and history: `git diff`, `git log`.
+- Search and tree output: `rg`, `grep -R`, `find`, `tree`, `ls -R`.
+- Large low-risk reads: CSS, HTML, JSON, logs, docs, generated files, large JS/TS/Python source files, and large Vue/Svelte components.
+- Large successful edit/write tool results: conservative `TOKENLESS-EDIT-PACKET` and `TOKENLESS-WRITE-PACKET`.
+- Unexpectedly large Bash output through fallback compression.
 
-## What it handles now
-
-- Test logs: `npm test`, `pytest`, `go test`, `cargo test`
-- Build and CI logs: `npm run build`, `docker build`, `kubectl logs`
-- Diffs: `git diff`, `git log`
-- Search and tree output: `rg`, `grep -R`, `find`, `tree`, `ls -R`
-- Large low-risk reads: CSS, HTML, JSON, logs, docs, generated files, large JS/TS/Python source files, and large Vue/Svelte components
-- Large successful edit/write tool results: conservative `TOKENLESS-EDIT-PACKET` / `TOKENLESS-WRITE-PACKET`
-- Fallback compression for unexpectedly huge Bash output
-
-Small bounded commands such as `rg -m 20`, `find ... | head`, `cat file | grep`, and `tree | head` are allowed through directly. Small reads are not compressed by default. JS/TS/Python source reads are only compressed when they cross the large-source threshold. Vue/Svelte single-file components use a lower threshold because they combine template, script, and style in one file.
-
-## How it works
-
-```text
-Claude wants to run a noisy command
-  -> PreToolUse caps it before raw output enters context
-  -> Claude reruns the Tokenless wrapper
-  -> Tokenless executes the original command locally
-  -> Tokenless saves raw stdout/stderr as an artifact
-  -> Claude receives TOKENLESS-PACKET/0.1
-```
-
-The raw output is still available through `tokenless show` and `tokenless expand`. The shorter `acc` command remains as a compatibility alias.
+Small bounded commands, such as `rg -m 20`, `find ... | head`, `cat file | grep`, and `tree | head`, pass through directly. Small reads are not compressed by default.
 
 ## Read packets
 
-Tokenless can cap large low-risk `Read` outputs as `TOKENLESS-READ-PACKET/0.1`.
+Read packets cap large low-risk file reads as `TOKENLESS-READ-PACKET/0.1`.
 
 Default policy:
 
-- Compress low-risk reads over roughly 4000 estimated tokens: CSS, HTML, JSON, logs, docs, lockfiles, generated files.
-- Compress large JS/TS/React/Python source reads over roughly 30000 estimated tokens with source-oriented packets.
-- Compress large Vue/Svelte single-file components over roughly 12000 estimated tokens with component-oriented packets.
+- Compress low-risk reads over roughly 4,000 estimated tokens: CSS, HTML, JSON, logs, docs, lockfiles, generated files.
+- Compress large JS/TS/React/Python source reads over roughly 30,000 estimated tokens with source-oriented packets.
+- Compress large Vue/Svelte single-file components over roughly 12,000 estimated tokens with component-oriented packets.
 - Do not compress small files.
-- Do not compress other source files such as `.go`, `.rs`, `.java`, `.swift`, `.cpp` by default.
+- Do not compress source families such as `.go`, `.rs`, `.java`, `.swift`, or `.cpp` by default.
 
-Read packets are indexes, not edit evidence. If a model needs to modify exact code or style, it must expand the relevant lines first:
+Read packets are indexes, not edit proof. If Claude needs exact code or style, it should expand the relevant lines first:
 
 ```bash
 tokenless expand ctx_abc --around ".target-card" --data-dir ~/.tokenless
 tokenless expand ctx_abc --lines 520:535 --data-dir ~/.tokenless
 ```
 
-For CSS/SCSS/Less and HTML/HTM/SVG files, read packets include a deterministic editable summary: CSS variables, color palette, likely editable selectors, media/animation rules, HTML sections, ids/classes, interactive elements, assets, and headings. Each section has fixed item limits and omitted counts; raw content remains available through artifacts.
+For CSS, SCSS, Less, HTML, HTM, and SVG files, read packets include deterministic editable summaries: variables, color palettes, likely editable selectors, media and animation rules, sections, ids/classes, interactive elements, assets, and headings.
 
 Large-file gate behavior:
 
-- For large low-risk files, Tokenless blocks raw `Read`, `grep`, `rg`, `sed`, `cat`, `head`, `tail`, `Edit`, `MultiEdit`, and `Write` access until a `TOKENLESS-READ-PACKET` exists.
-- The required next step is printed in the hook message, usually `tokenless read --agent --data-dir ~/.tokenless <file>`.
-- The read packet records file size and modified time.
-- If the file changes after the packet is created, the packet is stale. Tokenless blocks the next access and asks for a fresh `tokenless read`.
-- There is no broad edit grace window after a file changes. This avoids stale line numbers and accidental edits against old evidence.
-- For several related changes in the same area, expand the relevant lines and use one `MultiEdit` while the packet is still current.
+- Tokenless blocks raw access to large low-risk files until a read packet exists.
+- The hook prints the required next command, usually `tokenless read --agent --data-dir ~/.tokenless <file>`.
+- Read packets record file size and modified time.
+- If the file changes after packet creation, the packet is stale and Tokenless asks for a fresh packet.
+- For several related changes, expand the relevant lines and use one bounded edit while the packet is current.
 
-The regression check is:
-
-```bash
-npm run eval:read
-```
-
-## Edit and Write packets
+## Edit and write packets
 
 Tokenless can cap large successful `Edit`, `MultiEdit`, and low-risk `Write` tool results.
 
-This is intentionally conservative:
+The policy is intentionally conservative:
 
-- Successful `Edit` / `MultiEdit` output over roughly 3000 estimated tokens can be replaced with `TOKENLESS-EDIT-PACKET/0.1`.
-- Successful low-risk `Write` output over roughly 5000 estimated tokens can be replaced with `TOKENLESS-WRITE-PACKET/0.1`.
-- Failed or risky outputs are not compressed.
+- Successful `Edit` / `MultiEdit` output over roughly 3,000 estimated tokens can become `TOKENLESS-EDIT-PACKET/0.1`.
+- Successful low-risk `Write` output over roughly 5,000 estimated tokens can become `TOKENLESS-WRITE-PACKET/0.1`.
+- Failed or risky outputs are never compressed.
 - Source-code `Write` outputs are not compressed by default.
-- Raw tool output is saved as a local artifact before replacement.
+- Raw tool output is stored locally before replacement.
 
-Risky outputs are passed through unchanged when they include signals such as:
+Risk signals that pass through unchanged include:
 
 ```text
 Error
@@ -161,231 +242,33 @@ No changes
 partial
 ```
 
-The edit/write packet does not claim the edit is semantically correct. It only confirms the tool completed successfully, records the raw artifact, and tells the agent that any previous read packet for the file should be treated as stale.
+Edit/write packets do not claim semantic correctness. They only confirm the tool completed successfully, preserve the raw artifact, and mark previous read packets for that file as stale.
 
-## Eval demo
+## Launcher behavior
 
-```bash
-git clone https://github.com/MaxLiu199909/Tokenless.git
-cd Tokenless
-npm run eval:complex
-```
-
-Expected shape:
+`tokenless launch` starts Claude Code with normal read, edit, write, and bash tools available, but disables high-overhead Task/Plan tools by default:
 
 ```text
-TOKENLESS-COMPLEX-TEST/0.1
-raw tokens: 16250
-compressed tokens: ~1100
-ratio: ~7%
-pass: yes
+TaskCreate, TaskUpdate, TaskList, TaskGet, EnterPlanMode, ExitPlanMode
 ```
 
-To test the actual Claude Code hook path, run this inside Claude Code:
+This reduces fixed tool-schema overhead and prevents task-list history from being repeatedly carried through API request context.
 
-```bash
-cd Tokenless && npm run test:complex
-```
-
-Expected behavior:
-
-```text
-PreToolUse caps the command
-Claude reruns node .../bin/acc run --agent ...
-Claude sees TOKENLESS-PACKET/0.1
-```
-
-## CLI
-
-Use the local CLI directly:
-
-```bash
-node plugins/claude-code/bin/tokenless --help
-```
-
-For npm/global packaging, Tokenless exposes both commands:
-
-```bash
-tokenless --help
-acc --help
-```
-
-`tokenless` is the preferred public command. `acc` remains available as a short compatibility alias and protocol-oriented command.
-
-Recommended local setup from a checkout:
-
-```bash
-npm install
-npm link
-tokenless install-hooks --user
-tokenless launch
-```
-
-If Claude Code is not available as `claude` on your `PATH`, point Tokenless at
-the local Claude binary:
-
-```bash
-CLAUDE_BIN=/path/to/claude tokenless launch
-```
-
-Start Claude Code through the Tokenless launcher to use the default Lean session
-profile:
-
-```bash
-tokenless launch
-```
-
-`tokenless launch` keeps normal read, edit, write, and bash tools available, but
-disables high-overhead Task/Plan tools by default. If you need Claude Code's
-native task list and plan-mode UI for a session, opt back in:
+Opt back into Task/Plan tools for a session:
 
 ```bash
 TOKENLESS_ALLOW_TASK_TOOLS=1 tokenless launch
 ```
 
-Common commands:
+## Slash commands
 
-```bash
-tokenless run --agent --data-dir /tmp/tokenless-test -- npm test
-tokenless latest --data-dir ~/.tokenless
-tokenless list --data-dir ~/.tokenless
-tokenless stats --data-dir ~/.tokenless
-tokenless api-usage --since 24h
-tokenless show latest --data-dir ~/.tokenless
-tokenless expand latest --around "Regression family 44" --data-dir ~/.tokenless
-tokenless clean --data-dir ~/.tokenless --keep 100 --dry-run
-tokenless style status
-tokenless style-benchmark start coding
-tokenless benchmark-copy aurora-10k-tsx
-```
-
-`tokenless stats` separates savings by source:
-
-- `hook`: real Claude Code hook-path compression.
-- `eval`: local evaluation fixtures.
-- `smoke`: manual probes, doctor checks, and ad hoc compression runs.
-- `legacy`: older records created before source tagging.
-
-Local Claude Code API usage:
-
-```bash
-npm run tokenless:api-usage
-npm run tokenless:api-usage:24h
-```
-
-Temporary raw API body probe, for local verification only:
-
-```bash
-node plugins/claude-code/bin/tokenless api-probe start --name my-benchmark
-node plugins/claude-code/bin/tokenless api-probe inspect --dir "$TOKENLESS_API_PROBE_DIR" --keyword originalFile
-node plugins/claude-code/bin/tokenless api-probe stats --dir "$TOKENLESS_API_PROBE_DIR"
-node plugins/claude-code/bin/tokenless api-probe stop
-```
-
-Raw API bodies can contain full prompts, tool outputs, and sensitive local context. Keep this disabled unless you are verifying what enters model context.
-
-### Launcher guard: Task/Plan tools
-
-The `tokenless launch` command defaults to a Claude Code session with
-high-overhead Task/Plan tools disabled (`TaskCreate`, `TaskUpdate`,
-`TaskList`, `TaskGet`, `EnterPlanMode`, and `ExitPlanMode`) while keeping normal
-execution tools such as read, edit, write, and bash available.
-
-This reduces fixed tool-schema overhead and prevents task-list history from
-being repeatedly carried through API request context. If you want Claude Code's
-native task list and plan-mode UI back for a session, opt in explicitly:
-
-```bash
-node plugins/claude-code/bin/tokenless launch
-TOKENLESS_ALLOW_TASK_TOOLS=1 node plugins/claude-code/bin/tokenless launch
-```
-
-Use `api-probe stats` to separate API-confirmed evidence from local hook savings:
-
-- API-confirmed evidence comes from raw request/response body files.
-- Hook-local savings come from Tokenless artifacts and can include tool outputs that Claude Code does not send back to the API.
-- `read-packet` savings are API-confirmed only when `TOKENLESS-READ-PACKET` appears in request files.
-- `edit-packet` / `write-packet` savings are hook-local unless `TOKENLESS-EDIT-PACKET` or `TOKENLESS-WRITE-PACKET` appears in request files.
-- `originalFile` and `structuredPatch` should normally be zero in request files; non-zero values indicate raw edit payload leakage.
-
-Real Claude Code hook verification:
-
-```bash
-npm run tokenless:real-check -- --api-dir ~/.tokenless/api-bodies-realtest --file /Users/mac/einstein-page/style-probe-2.css
-```
-
-This prints `TOKENLESS-REAL-CHECK/0.1` with:
-
-- real hook-path savings from `tokenless stats`
-- `read-packet`, `edit-packet`, and `write-packet` savings
-- pending large-file gates
-- read-packet index entries for the target file
-- `TOKENLESS-READ-PACKET` and `NEXT REQUIRED COMMAND` matches found in raw API probe files
-- `TOKENLESS-EDIT-PACKET`, `TOKENLESS-WRITE-PACKET`, `blocked before execution`, and `stale` matches found in raw API probe files
-- recent hook trace lines
-
-## Benchmarks
-
-These are real Claude Code API-body measurements from fuzzy UI-edit tasks. The
-main metric is estimated request-body tokens from raw API request logs, not local
-hook-side savings estimates.
-
-| Scenario | Baseline request tokens | Optimized request tokens | Request reduction |
-| --- | ---: | ---: | ---: |
-| Large CSS visual edit, Tokenless OFF -> ON | 1,017,642 | 403,995-473,354 | ~54-60% |
-| 10k-line React/TSX edit, Tokenless OFF -> ON | 917,137 | 545,456 | 40.5% |
-| Multifile React dashboard, default launcher + Tokenless OFF -> ON | 628,261 | 512,521 | 18.4% |
-| Multifile React dashboard, Task/Plan tools on -> default launcher | 1,524,894 | 1,087,753 | 28.7% |
-| 5-turn CRM vibe coding, Tokenless OFF -> coding profile | 4,697,867 | 2,476,391 | 47.3% |
-| 6-turn natural conversation, Tokenless OFF -> chat profile | 142,748 | 136,926 | 4.1% |
-
-The CSS task is the strongest path today: large style files have stable editable
-summaries, and repeated runs reduced request-body tokens from about 1.02M to
-about 0.40M-0.47M.
-
-The 10k-line React/TSX task shows the large-source path working in a realistic
-single-file app edit: request-body tokens dropped from 917,137 to 545,456 in a
-clean true-OFF comparison. TSX gains are real but more trajectory-sensitive than
-CSS because the model may carry the read packet through many follow-up requests.
-
-The multifile dashboard task is closer to an agentic product-polish run across
-components and CSS. In the default launcher, Tokenless ON reduced request
-tokens from 628,261 to 512,521. Separately, disabling Claude Code Task/Plan
-tools reduced request tokens from 1,524,894 to 1,087,753 in the same task family.
-
-The 5-turn CRM vibe-coding task is the most realistic interactive run so far:
-a non-specialist user gave vague product-polish prompts, then asked for clearer
-prioritization, a new expansion-opportunity section, table/activity cleanup, and
-interaction polish. The `coding` profile reduced request tokens from 4.70M to
-2.48M, reduced requests from 84 to 51, and reduced response tokens by 44.4%.
-
-The 6-turn natural-conversation task did not use file tools or Tokenless read
-packets. It shows the `chat` profile's intended path: response tokens dropped
-from 7,223 to 1,442, or 80.0%, while total API-body tokens dropped 7.7%.
-
-A valid OFF run must show `TOKENLESS-READ-PACKET: request=0` and
-`request_saved_estimate: 0`; otherwise it is not a true OFF comparison.
-
-See [docs/benchmarking.md](docs/benchmarking.md) for the benchmark protocol,
-raw API capture setup, true-OFF checks, and caveats.
-
-## Claude Code hook setup
-
-Install hooks globally for Claude Code:
-
-```bash
-npm run tokenless:install
-```
-
-This writes `~/.claude/settings.json`, merges with existing hooks, and creates a timestamped backup if the file already exists.
-
-Optional slash commands:
+Install user-level Claude Code slash commands:
 
 ```bash
 tokenless install-commands --user
 ```
 
-This installs user-level Claude Code commands:
+Installed commands:
 
 ```text
 /tokenless
@@ -394,201 +277,94 @@ This installs user-level Claude Code commands:
 /tokenless-style-off
 ```
 
-- `/tokenless` shows a compact Tokenless dashboard: hook status, mode, savings, packet counts, pending gates, and latest artifact.
-- `/tokenless style ...` controls the same persistent public profile from the top-level command.
-- `/tokenless-style-*` commands are picker-friendly shortcuts for Claude Code's slash command menu.
-- `chat` and `coding` only change output style. `off` disables both style injection and Tokenless compression hooks.
-- `TOKENLESS_MODE=off` still works as an environment-level hard-off switch for true OFF benchmark runs.
+`/tokenless` shows hook status, active mode, profile, savings, packet counts, pending gates, and latest artifact.
 
-Style profiles:
-
-- `chat`: default shortest readable output. Internally this uses the strongest human-readable compression behavior tested so far.
-- `coding`: dense structured output for coding workflows. Internally this uses the D2 protocol that had the lowest measured response-token count.
-- `off`: normal model style with Tokenless style injection and compression hooks disabled.
-
-The default style is `chat`. Use `/tokenless style off` to fully disable
-Tokenless hook behavior, or `/tokenless style coding` for the structured coding
-profile.
-Legacy names such as `lean`, `silent`, `wire`, `dense`, and `dense2` are accepted
-as compatibility aliases, but the public surface is `chat`, `coding`, and `off`.
-
-The profile switch is stored under the Tokenless data directory, usually
-`~/.tokenless/style.json`. It takes effect through the installed Claude Code
-hooks, so run `tokenless install-hooks --user` and restart Claude Code if style
-changes do not apply.
-
-Output style benchmark from a six-prompt Claude Code API-body run:
-
-| Scenario | Mode | Request tokens | Response tokens | All tokens | Change |
-| --- | --- | ---: | ---: | ---: | ---: |
-| Mixed style prompts | `off` | 112,900 | 2,168 | 115,068 | baseline |
-| Mixed style prompts | `chat` | 112,346 | 1,189 | 113,535 | -45.2% response |
-| Mixed style prompts | `coding` | 112,944 | 1,085 | 114,029 | -50.0% response |
-| Natural conversation | `off` | 142,748 | 7,223 | 149,971 | baseline |
-| Natural conversation | `chat` | 136,926 | 1,442 | 138,368 | -80.0% response, -7.7% all |
-
-`chat` maps to the previous `silent` experiment because it stayed readable while
-beating `lean` by 17.0% on response tokens. `coding` maps to the previous
-`dense2` experiment because it was the lowest-token structured coding profile,
-beating `chat` by another 8.7%.
-
-See [docs/wire-protocol.md](docs/wire-protocol.md) for the Tokenless Wire
-Protocol concept and experiment plan.
-
-Generate repeatable style benchmark commands:
+Restart Claude Code after installing slash commands. If you previously installed older Tokenless commands, clean them up with:
 
 ```bash
-tokenless style-benchmark start chat
-tokenless style-benchmark start coding
-tokenless style-benchmark start off
+tokenless uninstall-commands --user
+tokenless install-commands --user
 ```
 
-Restart Claude Code after installing slash commands. If you previously installed an older Tokenless command set, `tokenless uninstall-commands --user` removes the current `/tokenless` command and old placeholders such as `/tokenless-mode`, `/tokenless-latest`, `/tokenless-expand`, and `/tokenless-doctor`.
-
-Check install status:
+## Common CLI commands
 
 ```bash
-npm run tokenless:status
-```
-
-Detect stale or duplicate hook config:
-
-```bash
-npm run doctor
-```
-
-Repair stale Tokenless or old ACC hook entries:
-
-```bash
-npm run tokenless:repair-hooks:dry-run
-npm run tokenless:repair-hooks
-```
-
-`repair-hooks` removes stale project-level hook entries that point at old local checkouts and installs the current user-level Tokenless hooks. It creates timestamped backups before writing settings files.
-
-Preview before writing:
-
-```bash
-npm run tokenless:install:dry-run
-```
-
-Project-only install is still available:
-
-```bash
-npm run acc:install-hooks:project
-```
-
-Preview uninstall without writing:
-
-```bash
-npm run tokenless:uninstall:dry-run
-```
-
-Or print a copyable hook block:
-
-```bash
-npm run acc:print-hooks
-```
-
-The older `npm run acc:*` scripts are kept for compatibility.
-
-For this local checkout, the hook scripts are:
-
-- `plugins/claude-code/scripts/pre_tool_use.js`
-- `plugins/claude-code/scripts/post_tool_use.js`
-- `plugins/claude-code/scripts/post_tool_failure.js`
-
-Tokenless currently uses a PreToolUse `deny` decision as a safety mechanism because some Claude Code builds do not reliably apply `updatedInput`. The message tells Claude to rerun the compacted command. This prevents raw noisy output from entering context.
-
-## Artifact workflow
-
-After a compressed command, inspect the latest artifact:
-
-```bash
+tokenless --help
+tokenless status --user
 tokenless latest --data-dir ~/.tokenless
+tokenless list --data-dir ~/.tokenless
+tokenless stats --data-dir ~/.tokenless
+tokenless show latest --data-dir ~/.tokenless
+tokenless expand latest --around "Cannot find module" --data-dir ~/.tokenless
+tokenless clean --data-dir ~/.tokenless --keep 100 --dry-run
+tokenless style status
+tokenless style coding
+tokenless api-usage --since 24h
 ```
 
-Expand only the relevant area:
+`tokenless stats` separates local savings by source:
+
+- `hook`: real Claude Code hook-path compression.
+- `eval`: local evaluation fixtures.
+- `smoke`: manual probes, doctor checks, and ad hoc compression runs.
+- `legacy`: records created before source tagging.
+
+## Benchmarking
+
+For API-body verification, enable raw Claude Code API body capture:
 
 ```bash
-tokenless expand latest --around "Cannot find module" --data-dir ~/.tokenless
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_LOG_RAW_API_BODIES="file:<api-body-dir>"
 ```
 
-This is the core Tokenless loop:
+Inspect captured request/response bodies:
+
+```bash
+node plugins/claude-code/bin/tokenless api-probe stats \
+  --dir "<api-body-dir>" \
+  --data-dir ~/.tokenless
+```
+
+A valid clean `off` run must show:
 
 ```text
-compact first
-act on evidence
-expand only if needed
-never paste the whole raw log back into context
+TOKENLESS-READ-PACKET: request=0
+TOKENLESS-EDIT-PACKET: request=0
+TOKENLESS-WRITE-PACKET: request=0
+request_saved_estimate: 0
 ```
 
-## Evaluation
+Raw API bodies can contain full prompts, tool outputs, and sensitive local context. Keep capture disabled unless you are verifying what enters model context.
 
-Run all synthetic and captured real cases:
+## Development and validation
+
+Run the main smoke checks:
+
+```bash
+npm run eval:complex
+npm run eval:read
+npm run eval:edit
+npm run eval:cli-smoke
+npm run doctor
+```
+
+Run all synthetic and captured cases:
 
 ```bash
 npm run eval:all
 ```
 
-Run the complex end-to-end test-log case:
+Check hook install state:
 
 ```bash
-npm run eval:complex
-```
-
-Run the local health check:
-
-```bash
-npm run doctor
-```
-
-Run read-packet policy checks:
-
-```bash
-npm run eval:read
-```
-
-Run edit/write packet policy checks:
-
-```bash
-npm run eval:edit
-```
-
-## MVP verification checklist
-
-Run these from the repo root:
-
-```bash
-cd Tokenless
-npm run eval:complex
-npm run eval:read
-npm run eval:edit
-npm run doctor
 npm run tokenless:status
 npm run tokenless:install:dry-run
 npm run tokenless:repair-hooks:dry-run
 npm run tokenless:uninstall:dry-run
-npm run tokenless:clean:dry-run
-npm run eval:all
 ```
 
-Expected results:
-
-```text
-eval:complex: pass: yes
-eval:read: read-packet policy checks pass
-eval:edit: edit/write packet policy checks pass
-doctor: all checks [ok]
-tokenless:status: prints TOKENLESS-STATUS/0.1
-tokenless:install:dry-run: prints TOKENLESS-INSTALL-HOOKS/0.1 and merged settings JSON
-tokenless:repair-hooks:dry-run: prints TOKENLESS-REPAIR-HOOKS/0.1
-tokenless:uninstall:dry-run: prints TOKENLESS-UNINSTALL-HOOKS/0.1 and removed count
-tokenless:clean:dry-run: prints TOKENLESS-CLEAN/0.1 with dry_run: yes
-eval:all: all cases pass
-```
-
-To verify the actual Claude Code hook path, run inside Claude Code:
+Test the actual Claude Code hook path inside Claude Code:
 
 ```bash
 npm run test:complex
@@ -600,7 +376,6 @@ Expected behavior:
 PreToolUse caps the noisy command
 Claude reruns node .../bin/acc run --agent ...
 Claude receives TOKENLESS-PACKET/0.1
-Failure families are visible
 Raw artifact can be expanded with tokenless expand latest
 ```
 
@@ -614,22 +389,36 @@ Preview cleanup:
 npm run tokenless:clean:dry-run
 ```
 
-Delete old artifacts manually:
+Delete old artifacts:
 
 ```bash
 tokenless clean --data-dir ~/.tokenless --older-than 7d
 ```
 
-Keep only the newest 100:
+Keep only the newest 100 artifacts:
 
 ```bash
 tokenless clean --data-dir ~/.tokenless --keep 100
 ```
 
-## Current limitations
+## Privacy and safety model
 
-- Claude Code Bash hook only.
-- No cloud service and no LLM summarization.
+- Tokenless runs locally.
+- Raw artifacts stay on local disk under the configured data directory.
+- Tokenless does not call a separate LLM or cloud summarization service.
 - Reducers are deterministic and intentionally conservative.
-- Legal, financial, medical, security, and exact-review tasks may require explicit artifact expansion.
-- Small outputs can still expand slightly if forced through Tokenless; the classifier avoids common bounded commands, but the policy is not perfect.
+- Risky failed outputs pass through unchanged.
+- Exact legal, financial, medical, security, and code-review work may require explicit artifact expansion.
+
+## Limitations
+
+- Claude Code hooks are the primary integration target.
+- Reducers are policy-based and may miss some noisy outputs.
+- Small outputs can expand slightly if forced through Tokenless; classifiers avoid common bounded commands, but the policy is not perfect.
+- Read packets are useful evidence, not a substitute for exact line expansion before high-risk edits.
+- API-body token counts are estimates, not exact billed-token accounting.
+
+## Contributors
+
+- Max Liu
+- Codex, AI coding assistant
