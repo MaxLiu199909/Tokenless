@@ -19,7 +19,7 @@
 <p align="center">
   <a href="#安装">安装</a> ·
   <a href="#输出模式">输出模式</a> ·
-  <a href="#真实-benchmark">Benchmark</a> ·
+  <a href="#benchmark-与证据">Benchmark 与证据</a> ·
   <a href="#隐私和安全">隐私和安全</a> ·
   <a href="docs/benchmarking.md">完整测试方法</a>
 </p>
@@ -59,18 +59,40 @@ artifact_id: ctx_20260518_abc123
 summary: imports, symbols, snippets, nearby files, exact expansion commands
 ```
 
-## 真实 Benchmark
+## Benchmark 与证据
 
-这些数据来自真实 Claude Code API body 记录。主指标是 raw API request body 的估算 token 数，不是本地 hook 侧的宣传估算。
+Tokenless 的证据分两层：一层是真实 Claude Code API-body benchmark，另一层是外部研究对“短输出、上下文压缩、减少冗余”这个方向的支持。
+
+### 真实 Claude Code 测试
+
+这些数据来自真实 Claude Code API body。主指标是 raw API request/response body 的估算 token 数，不是本地 hook 侧的宣传估算。
 
 | 场景 | 基线 | Tokenless | 降幅 |
 | --- | ---: | ---: | ---: |
 | 5 轮 CRM vibe coding，`off` 对比 `coding` | 4,697,867 request tokens | 2,476,391 | 47.3% |
 | 6 轮自然对话，`off` 对比 `chat` | 7,223 response tokens | 1,442 | 80.0% |
+| 大型 CSS 视觉编辑 | 1,017,642 request tokens | 403,995-473,354 | ~54-60% |
 | 10k 行 React/TSX 编辑 | 917,137 request tokens | 545,456 | 40.5% |
 | 多文件 React dashboard | 628,261 request tokens | 512,521 | 18.4% |
 
-完整测试方法见 [docs/benchmarking.md](docs/benchmarking.md) 和 [docs/style-benchmark.md](docs/style-benchmark.md)。
+最强的产品 benchmark 是 5 轮 CRM vibe-coding：非专业用户用模糊自然语言反复要求产品打磨。`coding` 模式相比 clean `off`，request tokens 降低 47.3%，response tokens 降低 44.4%，请求次数降低 39.3%。
+
+`chat` 的自然对话测试没有触发文件工具和 packet reducer，因此隔离了输出风格本身：response tokens 降低 80.0%。
+
+完整方法和原始记录见 [docs/benchmarking.md](docs/benchmarking.md) 和 [docs/style-benchmark.md](docs/style-benchmark.md)。
+
+### 研究支持
+
+这些论文不能证明 Tokenless 在每个会话里都一定有效，但它们支持一个核心前提：上下文长度和回复长度是可以工程化控制的变量；更少的文字有时更便宜、更快，甚至更准确。
+
+| 论文 | 和 Tokenless 的关系 |
+| --- | --- |
+| [Brevity Constraints Reverse Performance Hierarchies in Language Models](https://arxiv.org/abs/2604.00025) | 限制大模型回答长度，在一类 inverse-scaling 问题上让准确率提升 26.3 个百分点。Verbose 不总是更好。 |
+| [Prompt Compression in the Wild](https://arxiv.org/abs/2604.02985) | 当工作负载、压缩率和硬件匹配时，prompt compression 可以带来真实端到端加速，同时质量统计上不变。 |
+| [LLMLingua](https://arxiv.org/abs/2310.05736) | prompt compression 可以在高压缩率下保留语义完整性并降低推理成本。 |
+| [LongLLMLingua](https://arxiv.org/abs/2310.06839) | 长上下文压缩可以提升关键信息感知，同时降低成本和延迟。 |
+| [Selective Context](https://arxiv.org/abs/2310.06201) | 剪掉冗余上下文，实现 50% context cost、36% memory、32% inference time 降低，质量损失较小。 |
+| [Gist Tokens](https://arxiv.org/abs/2304.08467) | 训练模型把 prompt 压缩成可复用 token，最高达到 26x prompt compression 和 40% FLOPs 降低。 |
 
 ## 安装
 

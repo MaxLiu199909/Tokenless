@@ -19,7 +19,7 @@
 <p align="center">
   <a href="#instalación">Instalación</a> ·
   <a href="#perfiles-de-salida">Perfiles</a> ·
-  <a href="#benchmarks-verificados">Benchmarks</a> ·
+  <a href="#benchmark-evidence">Benchmark Evidence</a> ·
   <a href="#privacidad-y-seguridad">Privacidad</a> ·
   <a href="docs/benchmarking.md">Guía completa</a>
 </p>
@@ -59,18 +59,28 @@ artifact_id: ctx_20260518_abc123
 summary: imports, symbols, snippets, nearby files, exact expansion commands
 ```
 
-## Benchmarks verificados
+## Benchmark Evidence
 
-Estas medidas vienen de API bodies reales de Claude Code. La métrica principal es tokens estimados en request bodies crudos, no una estimación local del hook.
+Tokenless combines two evidence layers: real Claude Code API-body measurements and external research on brevity, prompt compression, and context compression.
 
-| Escenario | Baseline | Tokenless | Reducción |
+### Real Claude Code runs
+
+| Scenario | Baseline | Tokenless | Reduction |
 | --- | ---: | ---: | ---: |
 | 5-turn CRM vibe coding, `off` vs `coding` | 4,697,867 request tokens | 2,476,391 | 47.3% |
 | 6-turn natural conversation, `off` vs `chat` | 7,223 response tokens | 1,442 | 80.0% |
 | 10k-line React/TSX edit | 917,137 request tokens | 545,456 | 40.5% |
 | Multifile React dashboard | 628,261 request tokens | 512,521 | 18.4% |
 
-La metodología completa está en [docs/benchmarking.md](docs/benchmarking.md) y [docs/style-benchmark.md](docs/style-benchmark.md).
+Detailed methodology and raw run notes are in [docs/benchmarking.md](docs/benchmarking.md) and [docs/style-benchmark.md](docs/style-benchmark.md).
+
+### Research backing
+
+- [Brevity Constraints Reverse Performance Hierarchies in Language Models](https://arxiv.org/abs/2604.00025): brevity constraints improved large-model accuracy by 26.3 percentage points on inverse-scaling problems.
+- [Prompt Compression in the Wild](https://arxiv.org/abs/2604.02985): real speedups are possible when compression ratio, workload, and hardware match.
+- [LLMLingua](https://arxiv.org/abs/2310.05736) and [LongLLMLingua](https://arxiv.org/abs/2310.06839): prompt and long-context compression can reduce cost and latency while preserving key information.
+- [Selective Context](https://arxiv.org/abs/2310.06201): pruning redundant context reported 50% context-cost reduction.
+- [Gist Tokens](https://arxiv.org/abs/2304.08467): learned prompt compression reached up to 26x prompt compression.
 
 ## Instalación
 

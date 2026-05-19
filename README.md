@@ -26,7 +26,7 @@
   <a href="#before--after">Before / After</a> ·
   <a href="#installation">Install</a> ·
   <a href="#output-profiles">Profiles</a> ·
-  <a href="#verified-results">Benchmarks</a> ·
+  <a href="#benchmarks--evidence">Benchmarks & Evidence</a> ·
   <a href="docs/benchmarking.md">Full benchmark guide</a>
 </p>
 
@@ -60,24 +60,41 @@ Claude Code sessions can become expensive because tool outputs, file reads, task
 - Agent trajectory overhead: repeated request context, high-overhead Task/Plan tools, and large raw file payloads.
 - Response verbosity: optional `chat` and `coding` profiles reduce assistant output tokens.
 
-## Verified results
+## Benchmarks & Evidence
 
-These are real Claude Code API-body measurements. The primary metric is estimated request-body tokens from raw API request logs, not local hook-side savings estimates.
+Tokenless has two evidence layers: real Claude Code API-body measurements, and external research showing why shorter, denser context can reduce cost without automatically reducing quality.
+
+### Real Claude Code benchmark runs
+
+These are API-body measurements from actual Claude Code sessions. The main metric is estimated request-body or response-body tokens from raw API logs, not local hook-side savings estimates.
 
 | Scenario | Baseline | Tokenless | Reduction |
 | --- | ---: | ---: | ---: |
+| 5-turn CRM vibe coding, `off` vs `coding` | 4,697,867 request tokens | 2,476,391 | 47.3% |
+| 6-turn natural conversation, `off` vs `chat` | 7,223 response tokens | 1,442 | 80.0% |
 | Large CSS visual edit | 1,017,642 request tokens | 403,995-473,354 | ~54-60% |
 | 10k-line React/TSX edit | 917,137 request tokens | 545,456 | 40.5% |
 | Multifile React dashboard | 628,261 request tokens | 512,521 | 18.4% |
 | Task/Plan tools enabled vs default launcher | 1,524,894 request tokens | 1,087,753 | 28.7% |
-| 5-turn CRM vibe coding, `off` vs `coding` | 4,697,867 request tokens | 2,476,391 | 47.3% |
-| 6-turn natural conversation, `off` vs `chat` | 7,223 response tokens | 1,442 | 80.0% |
 
-The 5-turn CRM vibe-coding run is the strongest current product benchmark: a non-specialist user gave vague iterative product-polish prompts. The public `coding` profile reduced request tokens by 47.3%, response tokens by 44.4%, and request count by 39.3% versus clean `off`.
+The strongest current product benchmark is the 5-turn CRM vibe-coding run: a non-specialist user gave vague iterative product-polish prompts. The public `coding` profile reduced request tokens by 47.3%, response tokens by 44.4%, and request count by 39.3% versus clean `off`.
 
-The 6-turn natural-conversation run did not use file tools or packet reducers. It isolates the `chat` profile: response tokens dropped by 80.0%, and total API-body tokens dropped by 7.7%.
+The clean natural-conversation run isolates `chat`: no file tools or packet reducers were involved, and response tokens dropped by 80.0%.
 
 Detailed methodology and raw run notes are in [docs/benchmarking.md](docs/benchmarking.md) and [docs/style-benchmark.md](docs/style-benchmark.md).
+
+### Research backing
+
+The research does not prove Tokenless automatically helps every session. It supports the benchmark premise: context and response length are controllable engineering variables, and less text can sometimes be cheaper, faster, and more accurate.
+
+| Paper | Why it matters for Tokenless |
+| --- | --- |
+| [Brevity Constraints Reverse Performance Hierarchies in Language Models](https://arxiv.org/abs/2604.00025) | Brevity constraints improved large-model accuracy by 26.3 percentage points on inverse-scaling problems. Verbose is not always better. |
+| [Prompt Compression in the Wild](https://arxiv.org/abs/2604.02985) | Prompt compression can deliver real end-to-end speedups when workload, compression ratio, and hardware match; quality can remain statistically unchanged. |
+| [LLMLingua](https://arxiv.org/abs/2310.05736) | Prompt compression can reduce inference cost while preserving semantic integrity under high compression ratios. |
+| [LongLLMLingua](https://arxiv.org/abs/2310.06839) | Long-context compression can improve key-information perception while reducing cost and latency. |
+| [Selective Context](https://arxiv.org/abs/2310.06201) | Pruning redundant context reported 50% context-cost reduction, 36% memory reduction, and 32% inference-time reduction with minor quality loss. |
+| [Gist Tokens](https://arxiv.org/abs/2304.08467) | Learned prompt compression reached up to 26x prompt compression and up to 40% FLOPs reduction. |
 
 ## Installation
 
