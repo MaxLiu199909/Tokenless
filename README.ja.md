@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="#インストール">インストール</a> ·
+  <a href="#quick-start">Quick start</a> ·
   <a href="#出力プロファイル">プロファイル</a> ·
   <a href="#benchmark-evidence">Benchmark Evidence</a> ·
   <a href="#プライバシーと安全性">プライバシー</a> ·
@@ -25,6 +26,23 @@
 </p>
 
 ---
+
+## Quick start
+
+```bash
+npm install -g github:MaxForAI/Tokenless
+tokenless install-hooks --user
+tokenless install-commands --user
+tokenless launch
+```
+
+Then use Claude Code normally. Switch profiles anytime:
+
+```bash
+tokenless style chat
+tokenless style coding
+tokenless style off
+```
 
 Claude Code が高くつく理由は、コードを書きすぎることだけではありません。log、file read、diff、長い reply が次の request に何度も持ち込まれるからです。
 
@@ -193,6 +211,10 @@ tokenless api-usage --since 24h
 Tokenless は token を節約し、raw evidence も保持します。Star は無料です。Fair trade.
 
 [![Star History Chart](https://api.star-history.com/svg?repos=MaxForAI/Tokenless&type=Date)](https://star-history.com/#MaxForAI/Tokenless&Date)
+
+## Acknowledgements
+
+Tokenless is an independent implementation and does not use code from [caveman](https://github.com/JuliusBrussee/caveman). We acknowledge caveman as part of the broader open-source conversation around shorter, lower-token agent output.
 
 ## License
 

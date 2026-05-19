@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="#installation">Installation</a> ·
+  <a href="#quick-start">Quick start</a> ·
   <a href="#profils-de-sortie">Profils</a> ·
   <a href="#benchmark-evidence">Benchmark Evidence</a> ·
   <a href="#confidentialité-et-sécurité">Confidentialité</a> ·
@@ -25,6 +26,23 @@
 </p>
 
 ---
+
+## Quick start
+
+```bash
+npm install -g github:MaxForAI/Tokenless
+tokenless install-hooks --user
+tokenless install-commands --user
+tokenless launch
+```
+
+Then use Claude Code normally. Switch profiles anytime:
+
+```bash
+tokenless style chat
+tokenless style coding
+tokenless style off
+```
 
 Claude Code devient coûteux quand chaque log, lecture de fichier, diff et longue réponse continue d'être transporté dans la requête suivante.
 
@@ -193,6 +211,10 @@ tokenless api-usage --since 24h
 Tokenless économise des tokens et garde les preuves brutes. Une star ne coûte rien. Échange équitable.
 
 [![Star History Chart](https://api.star-history.com/svg?repos=MaxForAI/Tokenless&type=Date)](https://star-history.com/#MaxForAI/Tokenless&Date)
+
+## Acknowledgements
+
+Tokenless is an independent implementation and does not use code from [caveman](https://github.com/JuliusBrussee/caveman). We acknowledge caveman as part of the broader open-source conversation around shorter, lower-token agent output.
 
 ## License
 
