@@ -33,6 +33,34 @@ Decision:
 - Use `coding` for Claude Code coding workflows where structured dense output is
   acceptable. It is the current lowest-token mode and beats `chat` by 8.7%.
 
+## Clean natural-conversation run
+
+This run uses six ordinary non-coding prompts: explain agents, give practical
+criteria for product managers, walk through a user-feedback example, name
+specific risks, propose a first-week trial, and summarize the case for a boss.
+
+No file tools or Tokenless packet reducers were involved.
+
+| Mode | Request tokens | Response tokens | All tokens | Requests | Responses |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `off` | 142,748 | 7,223 | 149,971 | 7 | 7 |
+| `chat` | 136,926 | 1,442 | 138,368 | 7 | 7 |
+
+Result:
+
+- Response tokens: -5,781, or -80.0%.
+- Request tokens: -5,822, or -4.1%.
+- All API-body tokens: -11,603, or -7.7%.
+- Packet evidence stayed zero on both sides, so this isolates style behavior.
+
+Interpretation:
+
+- `chat` should be positioned as response-token and readability-cost reduction.
+- In non-coding conversations, total savings are smaller than response savings
+  because each turn still carries the accumulated conversation in the request.
+- The clean run had equal request/response counts, unlike interrupted or
+  contaminated conversation runs.
+
 ## Historical experiment table
 
 | Experiment | Response tokens | Responses | Avg / response | Note |

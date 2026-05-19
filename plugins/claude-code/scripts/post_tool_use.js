@@ -6,6 +6,7 @@ const { getReducerForOutput } = require('../lib/classify');
 const { createArtifactFromFallback, ensureArtifactDir, formatArtifactId, formatArtifactPointer } = require('../lib/artifact_store');
 const { shouldCompactRead, summarizeRead } = require('../lib/read_compact');
 const { clearReadGate, markReadPacket, refreshReadPacketAfterSmallEdit } = require('../lib/read_gate');
+const { isStyleOff } = require('../lib/style_config');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -16,7 +17,7 @@ const RISKY_EDIT_OUTPUT_RE = /\b(error|failed|failure|old_string|not found|multi
 const FAILED_TOOL_OUTPUT_RE = /\b(error editing file|file must be read first|old_string not found|string to replace not found|found multiple matches|no changes made|tool failed|edit failed|operation failed|permission denied|traceback \(most recent call last\))/i;
 
 function isTokenlessDisabled() {
-  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim()) || isStyleOff();
 }
 
 if (isTokenlessDisabled()) {

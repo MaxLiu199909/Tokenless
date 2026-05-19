@@ -4,9 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { isStyleOff } = require('../lib/style_config');
 
 function isTokenlessDisabled() {
-  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim()) || isStyleOff();
 }
 
 if (isTokenlessDisabled()) {

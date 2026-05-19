@@ -190,6 +190,14 @@ function formatStyleContext(style) {
   return '';
 }
 
+function isStyleOff(dataDir = defaultDataDir()) {
+  try {
+    return readStyleConfig(dataDir).style === 'off';
+  } catch (err) {
+    return false;
+  }
+}
+
 module.exports = {
   VALID_STYLES,
   defaultDataDir,
@@ -197,5 +205,6 @@ module.exports = {
   getStylePath,
   readStyleConfig,
   writeStyleConfig,
-  formatStyleContext
+  formatStyleContext,
+  isStyleOff
 };

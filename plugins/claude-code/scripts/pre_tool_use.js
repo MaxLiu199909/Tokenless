@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 const { isNoisyCommand } = require('../lib/classify');
 const { shouldCompactRead } = require('../lib/read_compact');
+const { isStyleOff } = require('../lib/style_config');
 const {
   setReadGate,
   getReadGate,
@@ -18,7 +19,7 @@ const {
 } = require('../lib/read_gate');
 
 function isTokenlessDisabled() {
-  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim());
+  return /^(0|false|off|disabled)$/i.test(String(process.env.TOKENLESS_MODE || '').trim()) || isStyleOff();
 }
 
 if (isTokenlessDisabled()) {

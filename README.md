@@ -336,6 +336,8 @@ hook-side savings estimates.
 | 10k-line React/TSX edit, Tokenless OFF -> ON | 917,137 | 545,456 | 40.5% |
 | Multifile React dashboard, default launcher + Tokenless OFF -> ON | 628,261 | 512,521 | 18.4% |
 | Multifile React dashboard, Task/Plan tools on -> default launcher | 1,524,894 | 1,087,753 | 28.7% |
+| 5-turn CRM vibe coding, Tokenless OFF -> coding profile | 4,697,867 | 2,476,391 | 47.3% |
+| 6-turn natural conversation, Tokenless OFF -> chat profile | 142,748 | 136,926 | 4.1% |
 
 The CSS task is the strongest path today: large style files have stable editable
 summaries, and repeated runs reduced request-body tokens from about 1.02M to
@@ -350,6 +352,16 @@ The multifile dashboard task is closer to an agentic product-polish run across
 components and CSS. In the default launcher, Tokenless ON reduced request
 tokens from 628,261 to 512,521. Separately, disabling Claude Code Task/Plan
 tools reduced request tokens from 1,524,894 to 1,087,753 in the same task family.
+
+The 5-turn CRM vibe-coding task is the most realistic interactive run so far:
+a non-specialist user gave vague product-polish prompts, then asked for clearer
+prioritization, a new expansion-opportunity section, table/activity cleanup, and
+interaction polish. The `coding` profile reduced request tokens from 4.70M to
+2.48M, reduced requests from 84 to 51, and reduced response tokens by 44.4%.
+
+The 6-turn natural-conversation task did not use file tools or Tokenless read
+packets. It shows the `chat` profile's intended path: response tokens dropped
+from 7,223 to 1,442, or 80.0%, while total API-body tokens dropped 7.7%.
 
 A valid OFF run must show `TOKENLESS-READ-PACKET: request=0` and
 `request_saved_estimate: 0`; otherwise it is not a true OFF comparison.
@@ -383,30 +395,37 @@ This installs user-level Claude Code commands:
 ```
 
 - `/tokenless` shows a compact Tokenless dashboard: hook status, mode, savings, packet counts, pending gates, and latest artifact.
-- `/tokenless style ...` controls the same persistent output style profile from the top-level command.
+- `/tokenless style ...` controls the same persistent public profile from the top-level command.
 - `/tokenless-style-*` commands are picker-friendly shortcuts for Claude Code's slash command menu.
-- Style is separate from compression mode: `TOKENLESS_MODE=off` still disables Tokenless hook behavior for true OFF benchmark runs.
+- `chat` and `coding` only change output style. `off` disables both style injection and Tokenless compression hooks.
+- `TOKENLESS_MODE=off` still works as an environment-level hard-off switch for true OFF benchmark runs.
 
 Style profiles:
 
 - `chat`: default shortest readable output. Internally this uses the strongest human-readable compression behavior tested so far.
 - `coding`: dense structured output for coding workflows. Internally this uses the D2 protocol that had the lowest measured response-token count.
-- `off`: normal model style with no Tokenless style injection.
+- `off`: normal model style with Tokenless style injection and compression hooks disabled.
 
-The default style is `chat`. Use `/tokenless style off` to return to normal
-model output, or `/tokenless style coding` for the structured coding profile.
+The default style is `chat`. Use `/tokenless style off` to fully disable
+Tokenless hook behavior, or `/tokenless style coding` for the structured coding
+profile.
 Legacy names such as `lean`, `silent`, `wire`, `dense`, and `dense2` are accepted
 as compatibility aliases, but the public surface is `chat`, `coding`, and `off`.
 
-The style switch is stored under the Tokenless data directory, usually `~/.tokenless/style.json`. It takes effect through the installed `UserPromptSubmit` hook, so run `tokenless install-hooks --user` and restart Claude Code if style changes do not apply.
+The profile switch is stored under the Tokenless data directory, usually
+`~/.tokenless/style.json`. It takes effect through the installed Claude Code
+hooks, so run `tokenless install-hooks --user` and restart Claude Code if style
+changes do not apply.
 
 Output style benchmark from a six-prompt Claude Code API-body run:
 
-| Style | Response tokens | Responses | Avg / response | Change vs off |
-| --- | ---: | ---: | ---: | ---: |
-| `off` | 2,168 | 6 | 361 | baseline |
-| `chat` | 1,189 | 6 | 198 | -45.2% |
-| `coding` | 1,085 | 6 | 181 | -50.0% |
+| Scenario | Mode | Request tokens | Response tokens | All tokens | Change |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Mixed style prompts | `off` | 112,900 | 2,168 | 115,068 | baseline |
+| Mixed style prompts | `chat` | 112,346 | 1,189 | 113,535 | -45.2% response |
+| Mixed style prompts | `coding` | 112,944 | 1,085 | 114,029 | -50.0% response |
+| Natural conversation | `off` | 142,748 | 7,223 | 149,971 | baseline |
+| Natural conversation | `chat` | 136,926 | 1,442 | 138,368 | -80.0% response, -7.7% all |
 
 `chat` maps to the previous `silent` experiment because it stayed readable while
 beating `lean` by 17.0% on response tokens. `coding` maps to the previous

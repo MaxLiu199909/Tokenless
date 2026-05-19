@@ -1245,6 +1245,7 @@ function printStyle({ dataDir, action }) {
   console.log(`updated_at: ${effective.updated_at || '(none)'}`);
   console.log(`available_styles: ${VALID_STYLES.join(', ')}`);
   console.log(`context: ${effective.style === 'off' ? '(none)' : formatStyleContext(effective.style)}`);
+  console.log(`hook_mode_effect: ${effective.style === 'off' ? 'off (style + compression hooks disabled)' : 'style-only (compression unchanged unless TOKENLESS_MODE=off)'}`);
   if (!isStatus) {
     console.log('restart_required: no, if UserPromptSubmit hook is already installed; otherwise run tokenless install-hooks --user and restart Claude Code');
   }
@@ -1501,13 +1502,16 @@ function benchmarkCopy({ fixture, source, outRoot, name, file }) {
 function printStatus({ scope, settingsPath }) {
   const targetPath = getSettingsPath(scope, settingsPath);
   const rawMode = String(process.env.TOKENLESS_MODE || 'on').trim() || 'on';
-  const disabled = /^(0|false|off|disabled)$/i.test(rawMode);
   const style = readStyleConfig();
+  const envDisabled = /^(0|false|off|disabled)$/i.test(rawMode);
+  const styleDisabled = style.style === 'off';
+  const disabled = envDisabled || styleDisabled;
+  const modeSource = styleDisabled && !envDisabled ? 'style_config' : (process.env.TOKENLESS_MODE ? 'TOKENLESS_MODE' : 'default');
   console.log('TOKENLESS-STATUS/0.1');
   console.log(`scope: ${scope || 'custom'}`);
   console.log(`settings: ${targetPath}`);
   console.log(`mode: ${disabled ? 'off' : 'on'}`);
-  console.log(`mode_source: ${process.env.TOKENLESS_MODE ? 'TOKENLESS_MODE' : 'default'}`);
+  console.log(`mode_source: ${modeSource}`);
   console.log(`mode_raw: ${rawMode}`);
   console.log(`style: ${style.style}`);
   console.log(`style_source: ${style.source}`);

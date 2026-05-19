@@ -303,6 +303,94 @@ request bodies. In the Task-enabled run, Task/Plan tool schema alone accounted
 for about 134k request tokens. The remaining delta came from changed trajectory
 and follow-up context size.
 
+## 5-turn CRM vibe-coding benchmark
+
+Fixture family: a React/Vite customer-growth cockpit with component files, data,
+utilities, and a large stylesheet.
+
+Immutable source:
+
+```text
+/Users/mac/.tokenless/benchmark-originals/vibe-coding-crm-20260519-044717
+```
+
+Run copies:
+
+```text
+/Users/mac/.tokenless/benchmark-runs/vibe-coding-crm-20260519-044717/coding
+/Users/mac/.tokenless/benchmark-runs/vibe-coding-crm-20260519-044717/off
+```
+
+Both copies started byte-equivalent:
+
+```text
+files: 16
+lines: 1188
+sha256: 64812847f3f6db851ef13f2a2a8b36660bcbb608b0841378e1ffbba68e502ea7
+```
+
+Prompt style: five vague, natural-language prompts from a non-specialist user.
+The user asks the agent to make an ordinary internal dashboard feel like a real
+SaaS operations homepage, clarify priorities and risk, add an expansion
+opportunity area, improve the account table and activity panel, and then polish
+interaction feedback and mobile behavior. The prompts intentionally avoid file
+names, component names, selectors, or implementation checklists.
+
+Coding profile run:
+
+| Metric | Value |
+| --- | ---: |
+| API body directory | `api-bodies-vibe-coding-crm-20260519-044717-coding` |
+| Request tokens | 2,476,391 |
+| Response tokens | 41,519 |
+| All tokens | 2,517,910 |
+| Request files | 51 |
+| `TOKENLESS-READ-PACKET` | 51 |
+| `request_saved_estimate` | 1,056,642 |
+
+True OFF run:
+
+| Metric | Value |
+| --- | ---: |
+| API body directory | `api-bodies-vibe-coding-crm-20260519-044717-off` |
+| Request tokens | 4,697,867 |
+| Response tokens | 74,659 |
+| All tokens | 4,772,526 |
+| Request files | 84 |
+| `TOKENLESS-READ-PACKET` | 0 |
+| `request_saved_estimate` | 0 |
+
+Raw leak checks for both runs:
+
+```text
+originalFile: 0
+structuredPatch: 0
+oldString: 0
+newString: 0
+```
+
+Result:
+
+```text
+Request saved: 2,221,476 tokens
+Request reduction: 47.3%
+Response saved: 33,140 tokens
+Response reduction: 44.4%
+Requests reduced: 33
+Request-count reduction: 39.3%
+```
+
+Interpretation:
+
+- The OFF run is clean: no Tokenless packets and no request-side savings
+  estimate.
+- The coding run combines read-packet compression with denser response style.
+- The measured request-token delta is larger than the API-confirmed packet
+  counterfactual because the coding profile also shortened the trajectory: 51
+  requests instead of 84.
+- This is the best current example for positioning Tokenless as reducing both
+  context size and interactive agent drift in coding workflows.
+
 ## Notes for future README claims
 
 Use conservative public wording:
@@ -313,6 +401,8 @@ Use conservative public wording:
   reduction from Tokenless ON/OFF.
 - Lean launcher Task/Plan tool trimming: about 29% request-token reduction in
   the multifile dashboard task family.
+- 5-turn CRM vibe-coding task with the public `coding` profile: about 47%
+  request-token reduction and about 39% fewer requests.
 - The current strongest evidence is API request-body reduction, not exact billed
   token savings.
 - Do not claim universal 80%+ savings from the current data.

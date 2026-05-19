@@ -1,5 +1,5 @@
 ---
-description: Disable Tokenless output style injection
+description: Disable Tokenless style and compression hooks
 allowed-tools: Bash
 ---
 

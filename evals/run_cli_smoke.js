@@ -89,6 +89,7 @@ function main() {
 
   const styleOff = run(['style', 'off', '--data-dir', tmpRoot]);
   assertContains(styleOff, 'effective_style: off', 'style off');
+  assertContains(styleOff, 'hook_mode_effect: off', 'style off');
 
   const styleAlias = run(['style', 'silent', '--data-dir', tmpRoot]);
   assertContains(styleAlias, 'configured_style: chat', 'style alias');
