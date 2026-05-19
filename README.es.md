@@ -178,6 +178,16 @@ tokenless api-usage --since 24h
 - Las salidas pequeñas pueden crecer si se fuerzan por Tokenless.
 - Un read packet es un índice de evidencia, no reemplaza la expansión exacta de líneas antes de una edición riesgosa.
 
+## Star this repo
+
+Tokenless ahorra tokens y conserva la evidencia original. Una estrella cuesta cero. Trato justo.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MaxForAI/Tokenless&type=Date)](https://star-history.com/#MaxForAI/Tokenless&Date)
+
+## License
+
+MIT. Libre para usar, modificar y distribuir.
+
 ## Contributors
 
 - Max Liu

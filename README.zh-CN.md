@@ -178,6 +178,16 @@ tokenless api-usage --since 24h
 - 小输出如果被强行压缩，可能反而变长。
 - Read packet 是证据索引，不是替代精确行号阅读。
 
+## 为这个仓库点星
+
+Tokenless 帮你省 token，也保留原始证据。点星不花钱。公平交易。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MaxForAI/Tokenless&type=Date)](https://star-history.com/#MaxForAI/Tokenless&Date)
+
+## 许可证
+
+MIT。可以自由使用、修改和发布。
+
 ## 贡献者
 
 - Max Liu

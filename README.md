@@ -422,6 +422,16 @@ tokenless clean --data-dir ~/.tokenless --keep 100
 - Read packets are useful evidence, not a substitute for exact line expansion before high-risk edits.
 - API-body token counts are estimates, not exact billed-token accounting.
 
+## Star this repo
+
+Tokenless saves tokens and keeps the raw evidence. Star costs zero. Fair trade.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MaxForAI/Tokenless&type=Date)](https://star-history.com/#MaxForAI/Tokenless&Date)
+
+## License
+
+MIT. Free to use, modify, and ship.
+
 ## Contributors
 
 - Max Liu

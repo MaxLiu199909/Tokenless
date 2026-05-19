@@ -178,6 +178,16 @@ tokenless api-usage --since 24h
 - 小さな output を無理に圧縮すると、逆に長くなる場合があります。
 - Read packet は evidence index であり、重要な編集前の exact line expansion の代替ではありません。
 
+## このリポジトリに Star を
+
+Tokenless は token を節約し、raw evidence も保持します。Star は無料です。Fair trade.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MaxForAI/Tokenless&type=Date)](https://star-history.com/#MaxForAI/Tokenless&Date)
+
+## License
+
+MIT。自由に使用、変更、配布できます。
+
 ## Contributors
 
 - Max Liu
